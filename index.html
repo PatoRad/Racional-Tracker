@@ -194,17 +194,7 @@ tr:hover td{background:rgba(255,255,255,.03)}
           <option value="rebalanceo">Rebalanceo</option>
         </select>
       </div>
-      <div class="field" id="f-etf-wrap" style="display:none">
-        <label>Activo</label>
-        <select id="f-etf" style="width:100px" onchange="document.getElementById('f-desc').value='Compra '+this.value">
-          <option value="VOO">VOO</option>
-          <option value="QQQM">QQQM</option>
-          <option value="VWO">VWO</option>
-          <option value="XLE">XLE</option>
-          <option value="GLDM">GLDM</option>
-          <option value="VNQ">VNQ</option>
-        </select>
-      </div>
+
       <div class="field" style="flex:1;min-width:130px">
         <label>Nota</label>
         <input type="text" id="f-desc" placeholder="Ej: Aporte mayo 2026" autocomplete="off"/>
@@ -358,6 +348,24 @@ function setSt(msg, color, ms) {
   if(ms) setTimeout(() => { el.textContent = ''; }, ms);
 }
 
+function normalizarFecha(f) {
+  if (!f) return hoy();
+  // Si viene en formato ISO (2026-06-04T...) convertir a DD/MM/YYYY
+  if (f.includes('T')) {
+    const d = new Date(f);
+    const dd = String(d.getUTCDate()).padStart(2,'0');
+    const mm = String(d.getUTCMonth()+1).padStart(2,'0');
+    const yy = d.getUTCFullYear();
+    return dd+'/'+mm+'/'+yy;
+  }
+  // Si viene en formato YYYY-MM-DD convertir a DD/MM/YYYY
+  if (f.match(/^\d{4}-\d{2}-\d{2}$/)) {
+    const [y,m,d] = f.split('-');
+    return d+'/'+m+'/'+y;
+  }
+  return f;
+}
+
 function save() {
   try { localStorage.setItem('rac2_records', JSON.stringify(records)); } catch(e){}
 
@@ -394,7 +402,10 @@ function load() {
     .then(r => r.json())
     .then(data => {
       if (data.records && data.records.length > 0) {
-        records = data.records;
+        records = data.records.map(r => ({
+          ...r,
+          fecha: normalizarFecha(r.fecha),
+        }));
         try { localStorage.setItem('rac2_records', JSON.stringify(records)); } catch(e){}
       } else {
         // Sheets vacío: intentar local

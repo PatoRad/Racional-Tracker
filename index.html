@@ -311,6 +311,8 @@ tr:hover td{background:rgba(255,255,255,.03)}
   <div class="modal">
     <h3>Editar movimiento</h3>
     <div class="field"><label>Nota</label><input type="text" id="m-desc"/></div>
+    <div class="field"><label>Monto (CLP)</label><input type="number" id="m-clp" step="1" placeholder="0"/></div>
+    <div class="field"><label>TC (CLP x USD)</label><input type="number" id="m-tc" step="1" placeholder="950"/></div>
     <div class="field"><label>Monto (USD)</label><input type="number" id="m-monto" step="0.01"/></div>
     <div class="field"><label>Tipo</label>
       <select id="m-tipo">
@@ -322,6 +324,8 @@ tr:hover td{background:rgba(255,255,255,.03)}
         <option value="rebalanceo">Rebalanceo</option>
       </select>
     </div>
+    <div class="field"><label>Monto (CLP)</label><input type="number" id="m-clp" step="1" placeholder="0"/></div>
+    <div class="field"><label>TC (CLP x USD)</label><input type="number" id="m-tc" step="1" placeholder="950"/></div>
     <div class="field"><label>Fecha</label><input type="date" id="m-fecha"/></div>
     <div class="modal-btns">
       <button class="btn-save" onclick="saveEdit()">Guardar</button>
@@ -520,6 +524,8 @@ function openEdit(i) {
   document.getElementById('m-desc').value  = r.desc||'';
   document.getElementById('m-monto').value = r.monto||0;
   document.getElementById('m-tipo').value  = r.tipo||'aporte';
+  document.getElementById('m-clp').value   = r.clp||'';
+  document.getElementById('m-tc').value    = r.tc||'';
   document.getElementById('m-fecha').value = toInput(r.fecha);
   document.getElementById('overlay').classList.add('on');
 }
@@ -532,7 +538,10 @@ function saveEdit() {
     desc:  document.getElementById('m-desc').value.trim()||records[editIdx].desc,
     monto: parseFloat(document.getElementById('m-monto').value)||0,
     tipo:  document.getElementById('m-tipo').value,
+    clp:   parseFloat(document.getElementById('m-clp').value)||0,
+    tc:    parseFloat(document.getElementById('m-tc').value)||0,
     fecha: fd,
+    etf:   records[editIdx].etf||'',
   };
   save(); refresh(); closeModal();
 }

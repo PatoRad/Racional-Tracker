@@ -188,6 +188,7 @@ tr:hover td{background:rgba(255,255,255,.03)}
         <select id="f-tipo" style="width:130px" onchange="toggleClpFields()">
           <option value="aporte">Depósito</option>
           <option value="compra">Compra</option>
+          <option value="venta">Venta</option>
           <option value="rendimiento">Rendimiento</option>
           <option value="retiro">Retiro</option>
           <option value="comision">Comisión</option>
@@ -237,6 +238,7 @@ tr:hover td{background:rgba(255,255,255,.03)}
       <button class="ftab" onclick="filtrar('rendimiento',this)">Rendimiento</button>
       <button class="ftab" onclick="filtrar('retiro',this)">Retiros</button>
       <button class="ftab" onclick="filtrar('comision',this)">Comisiones</button>
+      <button class="ftab" onclick="filtrar('venta',this)">Ventas</button>
       <button class="ftab" onclick="filtrar('rebalanceo',this)">Rebalanceos</button>
     </div>
 
@@ -313,6 +315,7 @@ tr:hover td{background:rgba(255,255,255,.03)}
       <select id="m-tipo">
         <option value="aporte">Depósito</option>
         <option value="compra">Compra</option>
+        <option value="venta">Venta</option>
         <option value="rendimiento">Rendimiento</option>
         <option value="retiro">Retiro</option>
         <option value="comision">Comisión</option>
@@ -428,8 +431,8 @@ const toInput = s => { const p=(s||'').split('/'); return p.length===3?`${p[2]}-
 const fromInput = v => { if(!v) return hoy(); const [y,m,d]=v.split('-'); return `${d}/${m}/${y}`; };
 const parseDate = s => { const p=s.split('/'); return new Date(p[2],p[1]-1,p[0]); };
 
-const TYPE_COLORS = {aporte:'var(--green)',compra:'var(--teal)',rendimiento:'var(--blue)',retiro:'var(--red)',comision:'var(--amber)',rebalanceo:'var(--muted)'};
-const TYPE_SIGN   = {aporte:'+',compra:'+',rendimiento:r=>r.monto>=0?'+':'−',retiro:'−',comision:'−',rebalanceo:'±'};
+const TYPE_COLORS = {aporte:'var(--green)',compra:'var(--blue)',venta:'var(--red)',rendimiento:'var(--blue)',retiro:'var(--red)',comision:'var(--amber)',rebalanceo:'var(--muted)'};
+const TYPE_SIGN   = {aporte:'+',compra:'+',venta:'−',rendimiento:r=>r.monto>=0?'+':'−',retiro:'−',comision:'−',rebalanceo:'±'};
 
 function refresh() { updateKPIs(); renderTabla(); renderPortafolio(); renderResumen(); }
 
@@ -478,31 +481,34 @@ function renderTabla() {
 
 function autoNota() {
   const tipo = document.getElementById('f-tipo').value;
-  if (tipo === 'compra') {
+  if (tipo === 'compra' || tipo === 'venta') {
     const etf = document.getElementById('f-etf').value;
     const otro = document.getElementById('f-etf-otro').value.trim();
     const nombre = etf === 'OTRO' ? (otro || 'Otro') : etf;
     document.getElementById('f-etf-otro-wrap').style.display = etf === 'OTRO' ? '' : 'none';
-    document.getElementById('f-desc').value = 'Compra ' + nombre;
+    const prefijo = tipo === 'venta' ? 'Venta' : 'Compra';
+    document.getElementById('f-desc').value = prefijo + ' ' + nombre;
   }
 }
 
 function toggleClpFields() {
   const tipo = document.getElementById('f-tipo').value;
-  const isAporte = tipo === 'aporte';
-  const isCompra = tipo === 'compra';
+  const isAporte  = tipo === 'aporte';
+  const isCompra  = tipo === 'compra';
+  const isVenta   = tipo === 'venta';
+  const needsEtf  = isCompra || isVenta;
   document.getElementById('f-clp-wrap').style.display  = isAporte ? '' : 'none';
   document.getElementById('f-tc-wrap').style.display   = isAporte ? '' : 'none';
-  document.getElementById('f-etf-wrap').style.display  = isCompra ? '' : 'none';
+  document.getElementById('f-etf-wrap').style.display  = needsEtf ? '' : 'none';
   document.getElementById('f-monto-label').textContent = isAporte ? '= Monto (USD)' : 'Monto (USD)';
   if (!isAporte) {
     document.getElementById('f-clp').value = '';
     document.getElementById('f-tc').value  = '';
   }
-  // Al elegir compra, pre-rellenar la nota con el ETF seleccionado
-  if (isCompra) {
+  if (needsEtf) {
     const etf = document.getElementById('f-etf').value;
-    document.getElementById('f-desc').value = 'Compra ' + etf;
+    const prefijo = isVenta ? 'Venta' : 'Compra';
+    document.getElementById('f-desc').value = prefijo + ' ' + etf;
   } else {
     document.getElementById('f-desc').value = '';
   }
@@ -526,7 +532,7 @@ function agregar() {
   const clp   = parseFloat(document.getElementById('f-clp').value)||0;
   const tc    = parseFloat(document.getElementById('f-tc').value)||0;
   let etf = '';
-  if (tipo === 'compra') {
+  if (tipo === 'compra' || tipo === 'venta') {
     const etfVal = document.getElementById('f-etf').value;
     etf = etfVal === 'OTRO' ? (document.getElementById('f-etf-otro').value.trim() || 'Otro') : etfVal;
   }
@@ -588,17 +594,21 @@ function go(sec, el) {
 }
 
 function calcEtfReal() {
-  // Suma de compras por ETF en USD
-  const compras = {};
-  records.filter(r=>r.tipo==='compra' && r.etf && ETF_TARGET[r.etf])
-    .forEach(r=>{ compras[r.etf] = (compras[r.etf]||0) + r.monto; });
-  const totalCompras = Object.values(compras).reduce((s,v)=>s+v,0);
-  // Porcentaje real por ETF (0 si no hay compras)
+  // Posición neta por ETF = compras − ventas
+  const posicion = {};
+  records.filter(r=>(r.tipo==='compra'||r.tipo==='venta') && r.etf && ETF_TARGET[r.etf])
+    .forEach(r=>{
+      const delta = r.tipo === 'venta' ? -r.monto : r.monto;
+      posicion[r.etf] = (posicion[r.etf]||0) + delta;
+    });
+  // Evitar posiciones negativas por errores de registro
+  Object.keys(posicion).forEach(e=>{ if(posicion[e]<0) posicion[e]=0; });
+  const totalCompras = Object.values(posicion).reduce((s,v)=>s+v,0);
   const pcts = {};
   Object.keys(ETF_TARGET).forEach(e=>{
-    pcts[e] = totalCompras > 0 ? (compras[e]||0)/totalCompras*100 : 0;
+    pcts[e] = totalCompras > 0 ? (posicion[e]||0)/totalCompras*100 : 0;
   });
-  return { pcts, compras, totalCompras };
+  return { pcts, compras: posicion, totalCompras };
 }
 
 function renderPortafolio() {

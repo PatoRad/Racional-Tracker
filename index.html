@@ -227,6 +227,7 @@ tr:hover td{background:rgba(255,255,255,.02)}
           <option value="compra">Compra</option>
           <option value="venta">Venta</option>
           <option value="rendimiento">Rendimiento</option>
+          <option value="dividendo">Dividendo</option>
           <option value="retiro">Retiro</option>
           <option value="comision">Comisión</option>
           <option value="rebalanceo">Rebalanceo</option>
@@ -273,6 +274,7 @@ tr:hover td{background:rgba(255,255,255,.02)}
         <button class="ftab" onclick="filtrar('aporte',this)">Depósitos</button>
         <button class="ftab" onclick="filtrar('compra',this)">Compras</button>
         <button class="ftab" onclick="filtrar('rendimiento',this)">Rendimiento</button>
+        <button class="ftab" onclick="filtrar('dividendo',this)">Dividendos</button>
         <button class="ftab" onclick="filtrar('retiro',this)">Retiros</button>
         <button class="ftab" onclick="filtrar('comision',this)">Comisiones</button>
         <button class="ftab" onclick="filtrar('venta',this)">Ventas</button>
@@ -340,6 +342,7 @@ tr:hover td{background:rgba(255,255,255,.02)}
         <option value="compra">Compra</option>
         <option value="venta">Venta</option>
         <option value="rendimiento">Rendimiento</option>
+        <option value="dividendo">Dividendo</option>
         <option value="retiro">Retiro</option>
         <option value="comision">Comisión</option>
         <option value="rebalanceo">Rebalanceo</option>
@@ -447,14 +450,14 @@ const parseFechaHora = r => {
   return d;
 };
 
-const TYPE_COLORS = {aporte:'var(--gold)',compra:'var(--blue)',venta:'var(--red)',rendimiento:'var(--blue)',retiro:'var(--red)',comision:'var(--muted)',rebalanceo:'var(--muted)'};
-const TYPE_SIGN   = {aporte:'+',compra:'+',venta:'−',rendimiento:r=>r.monto>=0?'+':'−',retiro:'−',comision:'−',rebalanceo:'±'};
+const TYPE_COLORS = {aporte:'var(--gold)',compra:'var(--blue)',venta:'var(--red)',rendimiento:'var(--blue)',dividendo:'var(--green)',retiro:'var(--red)',comision:'var(--muted)',rebalanceo:'var(--muted)'};
+const TYPE_SIGN   = {aporte:'+',compra:'+',venta:'−',rendimiento:r=>r.monto>=0?'+':'−',dividendo:'+',retiro:'−',comision:'−',rebalanceo:'±'};
 
 function refresh() { updateKPIs(); renderTabla(); renderPortafolio(); renderRendimiento(); }
 
 function updateKPIs() {
   const sum = t => records.filter(r=>r.tipo===t).reduce((s,r)=>s+r.monto,0);
-  const aportes = sum('aporte'), rend = sum('rendimiento');
+  const aportes = sum('aporte'), rend = sum('rendimiento') + sum('dividendo');
   const retiros = sum('retiro'), comis = sum('comision');
   const nA = records.filter(r=>r.tipo==='aporte').length;
   const valor = Math.max(0, aportes - retiros + rend - comis);
@@ -678,7 +681,8 @@ function renderPortafolio() {
 
 function renderRendimiento() {
   const sum = t => records.filter(r=>r.tipo===t).reduce((s,r)=>s+r.monto,0);
-  const aportes = sum('aporte'), rend = sum('rendimiento');
+  const aportes = sum('aporte'), rendPrecio = sum('rendimiento'), dividendos = sum('dividendo');
+  const rend = rendPrecio + dividendos;
   const retiros = sum('retiro'), comis = sum('comision');
   const valor = Math.max(0, aportes-retiros+rend-comis);
   const pct = aportes>0?(rend/aportes*100):0;
@@ -686,6 +690,7 @@ function renderRendimiento() {
   const stats = [
     {label:'Total aportado', val:fmtU(aportes), color:'var(--gold)'},
     {label:'Rendimiento acum.', val:(rend>=0?'+':'')+fmtU(rend), color:rend>=0?'var(--green)':'var(--red)'},
+    {label:'Dividendos', val:'+'+fmtU(dividendos), color:'var(--green)'},
     {label:'Rentabilidad', val:(pct>=0?'+':'')+pct.toFixed(2)+'%', color:pct>=0?'var(--green)':'var(--red)'},
     {label:'Retiros', val:fmtU(retiros), color:'var(--red)'},
     {label:'Comisiones', val:fmtU(comis), color:'var(--muted)'},
@@ -707,7 +712,7 @@ function renderRendimiento() {
   } else { pw.style.display='none'; }
 
   if(lineChart){lineChart.destroy();lineChart=null;}
-  const movs = [...records].filter(r=>['aporte','retiro','rendimiento','comision'].includes(r.tipo))
+  const movs = [...records].filter(r=>['aporte','retiro','rendimiento','dividendo','comision'].includes(r.tipo))
     .sort((a,b)=>parseFechaHora(a)-parseFechaHora(b));
   if(movs.length>0){
     let accA=0, accV=0;
@@ -715,6 +720,7 @@ function renderRendimiento() {
     movs.forEach(r=>{
       if(r.tipo==='aporte'){ accA+=r.monto; accV+=r.monto; }
       if(r.tipo==='rendimiento'){ accV+=r.monto; }
+      if(r.tipo==='dividendo'){ accV+=r.monto; }
       if(r.tipo==='retiro'){ accV-=r.monto; }
       if(r.tipo==='comision'){ accV-=r.monto; }
       labels.push(r.fecha); aportado.push(Math.round(accA*100)/100); valorSerie.push(Math.round(Math.max(0,accV)*100)/100);
@@ -742,7 +748,7 @@ function registrarRendimientoAuto() {
   const nuevoValor = parseFloat(inp.value);
   if (isNaN(nuevoValor) || nuevoValor < 0) { alert('Ingresa el valor actual de tu portafolio en Racional.'); return; }
   const sum = t => records.filter(r=>r.tipo===t).reduce((s,r)=>s+r.monto,0);
-  const aportes = sum('aporte'), rend = sum('rendimiento'), retiros = sum('retiro'), comis = sum('comision');
+  const aportes = sum('aporte'), rend = sum('rendimiento') + sum('dividendo'), retiros = sum('retiro'), comis = sum('comision');
   const valorActualCalc = Math.max(0, aportes - retiros + rend - comis);
   const delta = Math.round((nuevoValor - valorActualCalc) * 100) / 100;
   if (delta === 0) { setSt('Sin cambios en el rendimiento', 'var(--muted)', 2500); return; }

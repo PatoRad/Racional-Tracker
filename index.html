@@ -507,12 +507,12 @@ function ordenar(o) {
 
 function autoNota() {
   const tipo = document.getElementById('f-tipo').value;
-  if (tipo === 'compra' || tipo === 'venta') {
+  if (tipo === 'compra' || tipo === 'venta' || tipo === 'dividendo') {
     const etf = document.getElementById('f-etf').value;
     const otro = document.getElementById('f-etf-otro').value.trim();
     const nombre = etf === 'OTRO' ? (otro || 'Otro') : etf;
     document.getElementById('f-etf-otro-wrap').style.display = etf === 'OTRO' ? '' : 'none';
-    const prefijo = tipo === 'venta' ? 'Venta' : 'Compra';
+    const prefijo = tipo === 'venta' ? 'Venta' : tipo === 'dividendo' ? 'Dividendo' : 'Compra';
     document.getElementById('f-desc').value = prefijo + ' ' + nombre;
   }
 }
@@ -520,7 +520,7 @@ function autoNota() {
 function toggleClpFields() {
   const tipo = document.getElementById('f-tipo').value;
   const isAporte = tipo === 'aporte';
-  const needsEtf = tipo === 'compra' || tipo === 'venta';
+  const needsEtf = tipo === 'compra' || tipo === 'venta' || tipo === 'dividendo';
   document.getElementById('f-clp-wrap').style.display  = isAporte ? '' : 'none';
   document.getElementById('f-tc-wrap').style.display   = isAporte ? '' : 'none';
   document.getElementById('f-etf-wrap').style.display  = needsEtf ? '' : 'none';
@@ -528,7 +528,8 @@ function toggleClpFields() {
   if (!isAporte) { document.getElementById('f-clp').value=''; document.getElementById('f-tc').value=''; }
   if (needsEtf) {
     const etf = document.getElementById('f-etf').value;
-    document.getElementById('f-desc').value = (tipo==='venta'?'Venta ':'Compra ') + etf;
+    const prefijo = tipo==='venta' ? 'Venta ' : tipo==='dividendo' ? 'Dividendo ' : 'Compra ';
+    document.getElementById('f-desc').value = prefijo + etf;
   } else { document.getElementById('f-desc').value = ''; }
 }
 
@@ -549,7 +550,7 @@ function agregar() {
   const clp   = parseFloat(document.getElementById('f-clp').value)||0;
   const tc    = parseFloat(document.getElementById('f-tc').value)||0;
   let etf = '';
-  if (tipo === 'compra' || tipo === 'venta') {
+  if (tipo === 'compra' || tipo === 'venta' || tipo === 'dividendo') {
     const etfVal = document.getElementById('f-etf').value;
     etf = etfVal === 'OTRO' ? (document.getElementById('f-etf-otro').value.trim() || 'Otro') : etfVal;
   }

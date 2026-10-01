@@ -217,6 +217,10 @@ tr:hover td{background:rgba(255,255,255,.02)}
         <input type="date" id="f-fecha" style="width:130px"/>
       </div>
       <div class="field">
+        <label>Hora (opcional)</label>
+        <input type="time" id="f-hora" style="width:90px"/>
+      </div>
+      <div class="field">
         <label>Tipo</label>
         <select id="f-tipo" style="width:130px" onchange="toggleClpFields()">
           <option value="aporte">Depósito</option>
@@ -329,6 +333,7 @@ tr:hover td{background:rgba(255,255,255,.02)}
   <div class="modal">
     <h3>Editar movimiento</h3>
     <div class="field"><label>Fecha</label><input type="date" id="m-fecha"/></div>
+    <div class="field"><label>Hora (opcional)</label><input type="time" id="m-hora"/></div>
     <div class="field"><label>Tipo</label>
       <select id="m-tipo">
         <option value="aporte">Depósito</option>
@@ -436,6 +441,11 @@ const hoy  = () => new Date().toLocaleDateString('es-CL',{day:'2-digit',month:'2
 const toInput = s => { const p=(s||'').split('/'); return p.length===3?`${p[2]}-${p[1]}-${p[0]}`:''; };
 const fromInput = v => { if(!v) return hoy(); const [y,m,d]=v.split('-'); return `${d}/${m}/${y}`; };
 const parseDate = s => { const p=s.split('/'); return new Date(p[2],p[1]-1,p[0]); };
+const parseFechaHora = r => {
+  const d = parseDate(r.fecha);
+  if (r.hora) { const [hh,mm] = r.hora.split(':').map(Number); d.setHours(hh,mm,0,0); }
+  return d;
+};
 
 const TYPE_COLORS = {aporte:'var(--gold)',compra:'var(--blue)',venta:'var(--red)',rendimiento:'var(--blue)',retiro:'var(--red)',comision:'var(--muted)',rebalanceo:'var(--muted)'};
 const TYPE_SIGN   = {aporte:'+',compra:'+',venta:'−',rendimiento:r=>r.monto>=0?'+':'−',retiro:'−',comision:'−',rebalanceo:'±'};
@@ -462,7 +472,7 @@ function renderTabla() {
   const tb = document.getElementById('tbody');
   let list = tabFiltro==='todos' ? records.slice() : records.filter(r=>r.tipo===tabFiltro);
   if (!list.length) { tb.innerHTML='<tr><td colspan="7" class="empty">Sin movimientos aún</td></tr>'; return; }
-  list.sort((a,b)=> sortOrden==='recientes' ? parseDate(b.fecha)-parseDate(a.fecha) : parseDate(a.fecha)-parseDate(b.fecha));
+  list.sort((a,b)=> sortOrden==='recientes' ? parseFechaHora(b)-parseFechaHora(a) : parseFechaHora(a)-parseFechaHora(b));
   tb.innerHTML = list.map(r => {
     const idx = records.indexOf(r);
     const col = TYPE_COLORS[r.tipo] || 'var(--muted)';
@@ -471,7 +481,7 @@ function renderTabla() {
     const fmtTC  = n => n ? n.toLocaleString('es-CL') : '—';
     const etfCol = ETF_COLORS[r.etf] || 'var(--muted)';
     return `<tr>
-      <td class="dim">${r.fecha}</td>
+      <td class="dim">${r.fecha}${r.hora ? ' <span style="color:var(--faint);font-size:11px">'+r.hora+'</span>' : ''}</td>
       <td>${r.desc}${r.etf ? ' <span class="mono" style="font-size:11px;color:'+etfCol+'">'+r.etf+'</span>' : ''}</td>
       <td><span class="dot" style="background:${col}"></span><span class="dim">${r.tipo}</span></td>
       <td class="right mono dim">${fmtCLP(r.clp)}</td>
@@ -532,6 +542,7 @@ function agregar() {
   if (!monto) { alert('Ingresa un monto en USD (o calcula desde CLP).'); return; }
   const tipo  = document.getElementById('f-tipo').value;
   const fecha = fromInput(document.getElementById('f-fecha').value);
+  const hora  = document.getElementById('f-hora').value || '';
   const clp   = parseFloat(document.getElementById('f-clp').value)||0;
   const tc    = parseFloat(document.getElementById('f-tc').value)||0;
   let etf = '';
@@ -539,12 +550,13 @@ function agregar() {
     const etfVal = document.getElementById('f-etf').value;
     etf = etfVal === 'OTRO' ? (document.getElementById('f-etf-otro').value.trim() || 'Otro') : etfVal;
   }
-  records.push({tipo, monto:Math.abs(monto), desc, fecha, clp, tc, etf});
+  records.push({tipo, monto:Math.abs(monto), desc, fecha, hora, clp, tc, etf});
   save(); refresh();
   document.getElementById('f-desc').value='';
   document.getElementById('f-clp').value='';
   document.getElementById('f-tc').value='';
   document.getElementById('f-monto').value='';
+  document.getElementById('f-hora').value='';
   document.getElementById('f-etf-otro').value='';
   document.getElementById('f-etf-otro-wrap').style.display='none';
 }
@@ -559,6 +571,7 @@ function openEdit(i) {
   document.getElementById('m-clp').value   = r.clp||'';
   document.getElementById('m-tc').value    = r.tc||'';
   document.getElementById('m-fecha').value = toInput(r.fecha);
+  document.getElementById('m-hora').value  = r.hora||'';
   document.getElementById('overlay').classList.add('on');
 }
 function closeModal() { document.getElementById('overlay').classList.remove('on'); editIdx=-1; }
@@ -573,6 +586,7 @@ function saveEdit() {
     clp:   parseFloat(document.getElementById('m-clp').value)||0,
     tc:    parseFloat(document.getElementById('m-tc').value)||0,
     fecha: fd,
+    hora:  document.getElementById('m-hora').value || '',
     etf:   records[editIdx].etf||'',
   };
   save(); refresh(); closeModal();
@@ -694,7 +708,7 @@ function renderRendimiento() {
 
   if(lineChart){lineChart.destroy();lineChart=null;}
   const movs = [...records].filter(r=>['aporte','retiro','rendimiento','comision'].includes(r.tipo))
-    .sort((a,b)=>parseDate(a.fecha)-parseDate(b.fecha));
+    .sort((a,b)=>parseFechaHora(a)-parseFechaHora(b));
   if(movs.length>0){
     let accA=0, accV=0;
     const labels=[], aportado=[], valorSerie=[];

@@ -265,6 +265,10 @@ tr:hover td{background:rgba(255,255,255,.02)}
         <label id="f-monto-label">= Monto (USD)</label>
         <input type="number" id="f-monto" placeholder="0.00" min="0" step="0.01" style="width:105px"/>
       </div>
+      <div class="field" id="f-acciones-wrap" style="display:none">
+        <label>Acciones (opcional)</label>
+        <input type="number" id="f-acciones" placeholder="0.00000000" min="0" step="0.00000001" style="width:120px"/>
+      </div>
       <button class="btn-add" onclick="agregar()">Agregar</button>
     </div>
 
@@ -352,6 +356,7 @@ tr:hover td{background:rgba(255,255,255,.02)}
     <div class="field"><label>Monto (CLP)</label><input type="number" id="m-clp" step="1" placeholder="0"/></div>
     <div class="field"><label>TC (CLP x USD)</label><input type="number" id="m-tc" step="1" placeholder="950"/></div>
     <div class="field"><label>Monto (USD)</label><input type="number" id="m-monto" step="0.01"/></div>
+    <div class="field"><label>Acciones (opcional)</label><input type="number" id="m-acciones" step="0.00000001" placeholder="0"/></div>
     <div class="modal-btns">
       <button class="btn-save" onclick="saveEdit()">Guardar</button>
       <button class="btn-cancel" onclick="closeModal()">Cancelar</button>
@@ -489,7 +494,7 @@ function renderTabla() {
       <td><span class="dot" style="background:${col}"></span><span class="dim">${r.tipo}</span></td>
       <td class="right mono dim">${fmtCLP(r.clp)}</td>
       <td class="right mono dim">${fmtTC(r.tc)}</td>
-      <td class="right mono" style="color:${col}">${sign}${fmtU(Math.abs(r.monto))}</td>
+      <td class="right mono" style="color:${col}">${sign}${fmtU(Math.abs(r.monto))}${r.acciones ? '<div style="font-size:10px;color:var(--faint);font-weight:400">'+r.acciones+' acc.</div>' : ''}</td>
       <td class="right" style="white-space:nowrap">
         <button class="btn-edit" onclick="openEdit(${idx})">editar</button>
         <button class="btn-del" onclick="eliminar(${idx})">borrar</button>
@@ -521,9 +526,12 @@ function toggleClpFields() {
   const tipo = document.getElementById('f-tipo').value;
   const isAporte = tipo === 'aporte';
   const needsEtf = tipo === 'compra' || tipo === 'venta' || tipo === 'dividendo';
+  const needsAcciones = tipo === 'compra' || tipo === 'venta';
   document.getElementById('f-clp-wrap').style.display  = isAporte ? '' : 'none';
   document.getElementById('f-tc-wrap').style.display   = isAporte ? '' : 'none';
   document.getElementById('f-etf-wrap').style.display  = needsEtf ? '' : 'none';
+  document.getElementById('f-acciones-wrap').style.display = needsAcciones ? '' : 'none';
+  if (!needsAcciones) document.getElementById('f-acciones').value = '';
   document.getElementById('f-monto-label').textContent = isAporte ? '= Monto (USD)' : 'Monto (USD)';
   if (!isAporte) { document.getElementById('f-clp').value=''; document.getElementById('f-tc').value=''; }
   if (needsEtf) {
@@ -554,13 +562,15 @@ function agregar() {
     const etfVal = document.getElementById('f-etf').value;
     etf = etfVal === 'OTRO' ? (document.getElementById('f-etf-otro').value.trim() || 'Otro') : etfVal;
   }
-  records.push({tipo, monto:Math.abs(monto), desc, fecha, hora, clp, tc, etf});
+  const acciones = (tipo === 'compra' || tipo === 'venta') ? (parseFloat(document.getElementById('f-acciones').value)||0) : 0;
+  records.push({tipo, monto:Math.abs(monto), desc, fecha, hora, clp, tc, etf, acciones});
   save(); refresh();
   document.getElementById('f-desc').value='';
   document.getElementById('f-clp').value='';
   document.getElementById('f-tc').value='';
   document.getElementById('f-monto').value='';
   document.getElementById('f-hora').value='';
+  document.getElementById('f-acciones').value='';
   document.getElementById('f-etf-otro').value='';
   document.getElementById('f-etf-otro-wrap').style.display='none';
 }
@@ -576,6 +586,7 @@ function openEdit(i) {
   document.getElementById('m-tc').value    = r.tc||'';
   document.getElementById('m-fecha').value = toInput(r.fecha);
   document.getElementById('m-hora').value  = r.hora||'';
+  document.getElementById('m-acciones').value = r.acciones||'';
   document.getElementById('overlay').classList.add('on');
 }
 function closeModal() { document.getElementById('overlay').classList.remove('on'); editIdx=-1; }
@@ -591,6 +602,7 @@ function saveEdit() {
     tc:    parseFloat(document.getElementById('m-tc').value)||0,
     fecha: fd,
     hora:  document.getElementById('m-hora').value || '',
+    acciones: parseFloat(document.getElementById('m-acciones').value)||0,
     etf:   records[editIdx].etf||'',
   };
   save(); refresh(); closeModal();
@@ -612,19 +624,23 @@ function go(sec, el) {
 }
 
 function calcEtfReal() {
-  const posicion = {};
+  const posicion = {}, acciones = {};
   records.filter(r=>(r.tipo==='compra'||r.tipo==='venta') && r.etf && ETF_TARGET[r.etf])
-    .forEach(r=>{ const delta = r.tipo==='venta' ? -r.monto : r.monto; posicion[r.etf] = (posicion[r.etf]||0)+delta; });
+    .forEach(r=>{
+      const delta = r.tipo==='venta' ? -r.monto : r.monto;
+      posicion[r.etf] = (posicion[r.etf]||0)+delta;
+      if (r.acciones) { const deltaAcc = r.tipo==='venta' ? -r.acciones : r.acciones; acciones[r.etf] = (acciones[r.etf]||0)+deltaAcc; }
+    });
   Object.keys(posicion).forEach(e=>{ if(posicion[e]<0) posicion[e]=0; });
   const totalCompras = Object.values(posicion).reduce((s,v)=>s+v,0);
   const pcts = {};
   Object.keys(ETF_TARGET).forEach(e=>{ pcts[e] = totalCompras>0 ? (posicion[e]||0)/totalCompras*100 : 0; });
-  return { pcts, compras: posicion, totalCompras };
+  return { pcts, compras: posicion, totalCompras, acciones };
 }
 
 function renderPortafolio() {
   const etfs = Object.keys(ETF_TARGET);
-  const { pcts, totalCompras } = calcEtfReal();
+  const { pcts, totalCompras, acciones } = calcEtfReal();
   const hayCompras = totalCompras > 0;
 
   document.getElementById('etf-list').innerHTML = etfs.map(e => {
@@ -635,9 +651,10 @@ function renderPortafolio() {
     const gapColor = Math.abs(gap) < 1 ? 'var(--muted)' : gap > 0 ? 'var(--blue)' : 'var(--gold)';
     const gapStr  = hayCompras ? (gap>=0?'+':'')+gap.toFixed(1)+'pp' : '—';
     const barPct  = hayCompras ? Math.min(realPct/40*100,100) : Math.min(objPct/40*100,100);
+    const accStr  = acciones[e] ? Math.max(0,acciones[e]).toFixed(8).replace(/0+$/,'').replace(/\.$/,'') + ' acc.' : '';
     return `<div class="etf-row">
       <span class="etf-ticker" style="color:${col}">${e}</span>
-      <span class="etf-name-col dim">${ETF_NAMES[e]}</span>
+      <span class="etf-name-col dim">${ETF_NAMES[e]}${accStr ? '<br><span style=\"font-size:10px;color:var(--faint)\">'+accStr+'</span>' : ''}</span>
       <div class="etf-bar-wrap"><div class="etf-bar" style="width:${barPct}%;background:${col}"></div></div>
       <div class="etf-pcts">
         <span class="etf-real">${hayCompras ? realPct.toFixed(1)+'%' : objPct+'%'}</span>

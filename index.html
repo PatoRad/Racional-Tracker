@@ -295,7 +295,7 @@ tr:hover td{background:rgba(255,255,255,.02)}
         <thead>
           <tr>
             <th>Fecha</th><th>Nota</th><th>Tipo</th>
-            <th class="right">CLP</th><th class="right">TC</th><th class="right">USD</th><th class="right"></th>
+            <th class="right">CLP / TC</th><th class="right">USD</th><th class="right"></th>
           </tr>
         </thead>
         <tbody id="tbody"></tbody>
@@ -495,21 +495,21 @@ function updateKPIs() {
 function renderTabla() {
   const tb = document.getElementById('tbody');
   let list = tabFiltro==='todos' ? records.slice() : records.filter(r=>r.tipo===tabFiltro);
-  if (!list.length) { tb.innerHTML='<tr><td colspan="7" class="empty">Sin movimientos aún</td></tr>'; return; }
+  if (!list.length) { tb.innerHTML='<tr><td colspan="6" class="empty">Sin movimientos aún</td></tr>'; return; }
   list.sort((a,b)=> sortOrden==='recientes' ? parseFechaHora(b)-parseFechaHora(a) : parseFechaHora(a)-parseFechaHora(b));
   tb.innerHTML = list.map(r => {
     const idx = records.indexOf(r);
     const col = TYPE_COLORS[r.tipo] || 'var(--muted)';
     const sign = typeof TYPE_SIGN[r.tipo]==='function' ? TYPE_SIGN[r.tipo](r) : (TYPE_SIGN[r.tipo]||'');
-    const fmtCLP = n => n ? '$' + Math.round(n).toLocaleString('es-CL') : '—';
-    const fmtTC  = n => n ? n.toLocaleString('es-CL') : '—';
     const etfCol = ETF_COLORS[r.etf] || 'var(--muted)';
+    const notaYaMencionaEtf = r.etf && r.desc.toLowerCase().includes(r.etf.toLowerCase());
+    const notaYaMencionaTipo = r.desc.toLowerCase().startsWith(r.tipo === 'aporte' ? 'dep' : r.tipo);
+    const clpTc = r.clp ? '$'+Math.round(r.clp).toLocaleString('es-CL')+' <span class="dim">· '+r.tc.toLocaleString('es-CL')+'</span>' : '';
     return `<tr>
       <td class="dim">${r.fecha}${r.hora ? ' <span style="color:var(--faint);font-size:11px">'+r.hora+'</span>' : ''}</td>
-      <td>${r.desc}${r.etf ? ' <span class="mono" style="font-size:11px;color:'+etfCol+'">'+r.etf+'</span>' : ''}</td>
-      <td><span class="dot" style="background:${col}"></span><span class="dim">${r.tipo}</span></td>
-      <td class="right mono dim">${fmtCLP(r.clp)}</td>
-      <td class="right mono dim">${fmtTC(r.tc)}</td>
+      <td>${r.desc}${r.etf && !notaYaMencionaEtf ? ' <span class="mono" style="font-size:11px;color:'+etfCol+'">'+r.etf+'</span>' : ''}</td>
+      <td><span class="dot" style="background:${col}" title="${r.tipo}"></span>${notaYaMencionaTipo ? '' : '<span class="dim">'+r.tipo+'</span>'}</td>
+      <td class="right mono dim">${clpTc}</td>
       <td class="right mono" style="color:${col}">${sign}${fmtU(Math.abs(r.monto))}${r.acciones ? '<div style="font-size:10px;color:var(--faint);font-weight:400">'+r.acciones+' acc.</div>' : ''}</td>
       <td class="right" style="white-space:nowrap">
         <button class="btn-edit" onclick="openEdit(${idx})">editar</button>

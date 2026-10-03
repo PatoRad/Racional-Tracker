@@ -503,12 +503,11 @@ function renderTabla() {
     const sign = typeof TYPE_SIGN[r.tipo]==='function' ? TYPE_SIGN[r.tipo](r) : (TYPE_SIGN[r.tipo]||'');
     const etfCol = ETF_COLORS[r.etf] || 'var(--muted)';
     const notaYaMencionaEtf = r.etf && r.desc.toLowerCase().includes(r.etf.toLowerCase());
-    const notaYaMencionaTipo = r.desc.toLowerCase().startsWith(r.tipo === 'aporte' ? 'dep' : r.tipo);
     const clpTc = r.clp ? '$'+Math.round(r.clp).toLocaleString('es-CL')+' <span class="dim">· '+r.tc.toLocaleString('es-CL')+'</span>' : '';
     return `<tr>
       <td class="dim">${r.fecha}${r.hora ? ' <span style="color:var(--faint);font-size:11px">'+r.hora+'</span>' : ''}</td>
       <td>${r.desc}${r.etf && !notaYaMencionaEtf ? ' <span class="mono" style="font-size:11px;color:'+etfCol+'">'+r.etf+'</span>' : ''}</td>
-      <td><span class="dot" style="background:${col}" title="${r.tipo}"></span>${notaYaMencionaTipo ? '' : '<span class="dim">'+r.tipo+'</span>'}</td>
+      <td><span class="dot" style="background:${col}" title="${r.tipo}"></span></td>
       <td class="right mono dim">${clpTc}</td>
       <td class="right mono" style="color:${col}">${sign}${fmtU(Math.abs(r.monto))}${r.acciones ? '<div style="font-size:10px;color:var(--faint);font-weight:400">'+r.acciones+' acc.</div>' : ''}</td>
       <td class="right" style="white-space:nowrap">

@@ -474,21 +474,7 @@ const parseFechaHora = r => {
 const TYPE_COLORS = {aporte:'var(--gold)',compra:'var(--blue)',venta:'var(--red)',rendimiento:'var(--blue)',dividendo:'var(--green)',retiro:'var(--red)',comision:'var(--muted)',rebalanceo:'var(--muted)'};
 const TYPE_SIGN   = {aporte:'+',compra:'+',venta:'−',rendimiento:r=>r.monto>=0?'+':'−',dividendo:'+',retiro:'−',comision:'−',rebalanceo:'±'};
 
-function refreshEtfOptions() {
-  const conocidos = Object.keys(ETF_TARGET);
-  const historicos = [...new Set(records.map(r=>r.etf).filter(e => e && !conocidos.includes(e)))].sort();
-  ['f-etf','m-etf'].forEach(id => {
-    const sel = document.getElementById(id);
-    if (!sel) return;
-    const current = sel.value;
-    const base = conocidos.map(e=>`<option value="${e}">${e}</option>`).join('');
-    const hist = historicos.length ? `<optgroup label="Activos antiguos">${historicos.map(e=>`<option value="${e}">${e}</option>`).join('')}</optgroup>` : '';
-    sel.innerHTML = base + hist + '<option value="OTRO">Otro</option>';
-    if ([...sel.options].some(o=>o.value===current)) sel.value = current;
-  });
-}
-
-function refresh() { updateKPIs(); renderTabla(); renderPortafolio(); renderRendimiento(); refreshEtfOptions(); }
+function refresh() { updateKPIs(); renderTabla(); renderPortafolio(); renderRendimiento(); }
 
 function updateKPIs() {
   const sum = t => records.filter(r=>r.tipo===t).reduce((s,r)=>s+r.monto,0);

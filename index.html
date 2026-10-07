@@ -546,6 +546,7 @@ function toggleClpFields() {
   document.getElementById('f-clp-wrap').style.display  = needsClpTc ? '' : 'none';
   document.getElementById('f-tc-wrap').style.display   = needsClpTc ? '' : 'none';
   document.getElementById('f-etf-wrap').style.display  = needsEtf ? '' : 'none';
+  if (!needsEtf) document.getElementById('f-etf-otro-wrap').style.display = 'none';
   document.getElementById('f-acciones-wrap').style.display = needsAcciones ? '' : 'none';
   if (!needsAcciones) document.getElementById('f-acciones').value = '';
   document.getElementById('f-monto-label').textContent = needsClpTc ? '= Monto (USD)' : 'Monto (USD)';

@@ -540,15 +540,16 @@ function autoNota() {
 function toggleClpFields() {
   const tipo = document.getElementById('f-tipo').value;
   const isAporte = tipo === 'aporte';
+  const needsClpTc = tipo === 'aporte' || tipo === 'retiro';
   const needsEtf = tipo === 'compra' || tipo === 'venta' || tipo === 'dividendo';
   const needsAcciones = tipo === 'compra' || tipo === 'venta';
-  document.getElementById('f-clp-wrap').style.display  = isAporte ? '' : 'none';
-  document.getElementById('f-tc-wrap').style.display   = isAporte ? '' : 'none';
+  document.getElementById('f-clp-wrap').style.display  = needsClpTc ? '' : 'none';
+  document.getElementById('f-tc-wrap').style.display   = needsClpTc ? '' : 'none';
   document.getElementById('f-etf-wrap').style.display  = needsEtf ? '' : 'none';
   document.getElementById('f-acciones-wrap').style.display = needsAcciones ? '' : 'none';
   if (!needsAcciones) document.getElementById('f-acciones').value = '';
-  document.getElementById('f-monto-label').textContent = isAporte ? '= Monto (USD)' : 'Monto (USD)';
-  if (!isAporte) { document.getElementById('f-clp').value=''; document.getElementById('f-tc').value=''; }
+  document.getElementById('f-monto-label').textContent = needsClpTc ? '= Monto (USD)' : 'Monto (USD)';
+  if (!needsClpTc) { document.getElementById('f-clp').value=''; document.getElementById('f-tc').value=''; }
   if (needsEtf) {
     const etf = document.getElementById('f-etf').value;
     const prefijo = tipo==='venta' ? 'Venta ' : tipo==='dividendo' ? 'Dividendo ' : 'Compra ';
@@ -594,11 +595,11 @@ function eliminar(i) { if (!confirm('¿Eliminar este movimiento?')) return; reco
 
 function toggleModalFields() {
   const tipo = document.getElementById('m-tipo').value;
-  const isAporte = tipo === 'aporte';
+  const needsClpTc = tipo === 'aporte' || tipo === 'retiro';
   const needsEtf = tipo === 'compra' || tipo === 'venta' || tipo === 'dividendo';
   const needsAcciones = tipo === 'compra' || tipo === 'venta';
-  document.getElementById('m-clp-wrap').style.display = isAporte ? '' : 'none';
-  document.getElementById('m-tc-wrap').style.display  = isAporte ? '' : 'none';
+  document.getElementById('m-clp-wrap').style.display = needsClpTc ? '' : 'none';
+  document.getElementById('m-tc-wrap').style.display  = needsClpTc ? '' : 'none';
   document.getElementById('m-etf-wrap').style.display = needsEtf ? '' : 'none';
   document.getElementById('m-acciones-wrap').style.display = needsAcciones ? '' : 'none';
   if (!needsEtf) document.getElementById('m-etf-otro-wrap').style.display = 'none';

@@ -190,6 +190,14 @@ tr:hover td{background:rgba(255,255,255,.02)}
 
   <!-- PORTAFOLIO -->
   <div id="sec-portafolio" class="section on">
+    <div class="card" id="prox-card">
+      <div class="card-title">Próximo aporte</div>
+      <div id="prox-body"></div>
+      <div class="meta-input-row" style="justify-content:center;margin:12px 0 0">
+        <label>Monto a comprar (USD, opcional)</label>
+        <input type="number" id="prox-monto" placeholder="ej: 26.00" min="0" step="0.01" oninput="renderProximoAporte()"/>
+      </div>
+    </div>
     <div class="etf-list" id="etf-list"></div>
     <div id="portafolio-nota" style="display:none;font-size:12px;color:var(--muted);margin:-12px 0 16px;padding:0 4px">
       ℹ Sin compras registradas — mostrando asignación objetivo
@@ -325,6 +333,7 @@ tr:hover td{background:rgba(255,255,255,.02)}
       <div class="meta-bar"><div class="meta-fill" id="prog-fill"></div></div>
     </div>
     <div class="stat-row" id="stat-row"></div>
+    <div id="xirr-nota" style="display:none;font-size:11.5px;color:var(--faint);margin:-4px 0 16px;padding:0 4px;line-height:1.5"></div>
     <div class="card">
       <div class="card-title">Aportado acumulado vs. valor estimado en el tiempo</div>
       <div style="position:relative;height:220px">
@@ -678,6 +687,35 @@ function calcEtfReal() {
   return { pcts, compras: posicion, totalCompras, acciones };
 }
 
+function renderProximoAporte() {
+  const body = document.getElementById('prox-body');
+  if (!body) return;
+  const { compras, totalCompras, pcts } = calcEtfReal();
+  if (totalCompras <= 0) {
+    body.innerHTML = '<div class="dim">Registra compras para calcular la brecha contra el objetivo.</div>';
+    return;
+  }
+  const brechas = Object.keys(ETF_TARGET)
+    .map(e => ({ e, gap: ETF_TARGET[e] - pcts[e] }))
+    .sort((a, b) => b.gap - a.gap);
+  const top = brechas[0];
+  const col = ETF_COLORS[top.e];
+  const monto = parseFloat(document.getElementById('prox-monto').value) || 0;
+  let extra = '';
+  if (monto > 0) {
+    const nuevo = ((compras[top.e] || 0) + monto) / (totalCompras + monto) * 100;
+    extra = '<div class="dim" style="margin-top:6px">Con ' + fmtU(monto) + ' pasaría de ' + pcts[top.e].toFixed(1) + '% a <span class="mono" style="color:var(--text)">' + nuevo.toFixed(1) + '%</span> (objetivo ' + ETF_TARGET[top.e] + '%)</div>';
+  }
+  const resto = brechas.slice(1, 3).map(b =>
+    '<span class="mono" style="color:' + ETF_COLORS[b.e] + '">' + b.e + '</span> <span class="dim">' + (b.gap >= 0 ? '+' : '') + b.gap.toFixed(1) + 'pp</span>'
+  ).join(' &nbsp;·&nbsp; ');
+  body.innerHTML =
+    '<div class="mono" style="font-size:26px;font-weight:600;color:' + col + '">' + top.e + '</div>' +
+    '<div class="dim">' + ETF_NAMES[top.e] + ' · le faltan <span class="mono" style="color:var(--text)">' + top.gap.toFixed(1) + 'pp</span> para su objetivo</div>' +
+    extra +
+    '<div style="margin-top:10px;font-size:12px"><span class="dim">Siguientes: </span>' + resto + '</div>';
+}
+
 function renderPortafolio() {
   const etfs = Object.keys(ETF_TARGET);
   const { pcts, totalCompras, acciones } = calcEtfReal();
@@ -735,6 +773,31 @@ function renderPortafolio() {
 
   const nota = document.getElementById('portafolio-nota');
   if(nota) nota.style.display = hayCompras ? 'none' : 'block';
+  renderProximoAporte();
+}
+
+function calcXIRR() {
+  const flujos = [];
+  records.forEach(r => {
+    if (r.tipo === 'aporte') flujos.push({ t: parseFechaHora(r), v: -r.monto });
+    else if (r.tipo === 'retiro') flujos.push({ t: parseFechaHora(r), v: r.monto });
+  });
+  if (!flujos.length) return null;
+  const sum = t => records.filter(r => r.tipo === t).reduce((s, r) => s + r.monto, 0);
+  const valor = Math.max(0, sum('aporte') - sum('retiro') + sum('rendimiento') + sum('dividendo') - sum('comision'));
+  const fin = new Date(Math.max(...records.map(r => parseFechaHora(r).getTime())));
+  flujos.push({ t: fin, v: valor });
+  const t0 = Math.min(...flujos.map(f => f.t.getTime()));
+  const dias = (fin.getTime() - t0) / 86400000;
+  if (dias < 30 || valor <= 0) return null;
+  const npv = r => flujos.reduce((s, f) => s + f.v / Math.pow(1 + r, (f.t.getTime() - t0) / 86400000 / 365), 0);
+  let lo = -0.99, hi = 10;
+  if (npv(lo) * npv(hi) > 0) return null;
+  for (let i = 0; i < 200; i++) {
+    const mid = (lo + hi) / 2;
+    if (npv(lo) * npv(mid) <= 0) hi = mid; else lo = mid;
+  }
+  return { rate: (lo + hi) / 2 * 100, dias: Math.round(dias), fin };
 }
 
 function renderRendimiento() {
@@ -745,11 +808,13 @@ function renderRendimiento() {
   const valor = Math.max(0, aportes-retiros+rend-comis);
   const pct = aportes>0?(rend/aportes*100):0;
 
+  const xirr = calcXIRR();
   const stats = [
     {label:'Total aportado', val:fmtU(aportes), color:'var(--gold)'},
     {label:'Rendimiento acum.', val:(rend>=0?'+':'')+fmtU(rend), color:rend>=0?'var(--green)':'var(--red)'},
     {label:'Dividendos', val:'+'+fmtU(dividendos), color:'var(--green)'},
     {label:'Rentabilidad', val:(pct>=0?'+':'')+pct.toFixed(2)+'%', color:pct>=0?'var(--green)':'var(--red)'},
+    {label:'Rentab. anualizada', val: xirr ? (xirr.rate>=0?'+':'')+xirr.rate.toFixed(2)+'%' : '—', color: xirr ? (xirr.rate>=0?'var(--green)':'var(--red)') : 'var(--muted)'},
     {label:'Retiros', val:fmtU(retiros), color:'var(--red)'},
     {label:'Comisiones', val:fmtU(comis), color:'var(--muted)'},
     {label:'Valor estimado', val:fmtU(valor), color:'var(--blue)'},
@@ -758,6 +823,13 @@ function renderRendimiento() {
     `<div class="stat"><div class="stat-label">${s.label}</div><div class="stat-val" style="color:${s.color}">${s.val}</div></div>`
   ).join('');
 
+  const xn = document.getElementById('xirr-nota');
+  if (xn) {
+    if (xirr) {
+      xn.style.display = 'block';
+      xn.textContent = 'Rentabilidad anualizada (XIRR) sobre ' + xirr.dias + ' días, hasta ' + xirr.fin.toLocaleDateString('es-CL') + '. Pondera cuándo entró cada depósito.' + (xirr.dias < 365 ? ' Con menos de 1 año de historial es poco confiable: una ganancia chica en pocos meses se proyecta muy exagerada.' : '');
+    } else { xn.style.display = 'none'; }
+  }
   const meta = parseFloat(document.getElementById('meta-inp').value)||0;
   const pw = document.getElementById('prog-wrap');
   if(meta>0){

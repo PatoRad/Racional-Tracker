@@ -143,6 +143,7 @@ tr:hover td{background:rgba(255,255,255,.02)}
   .stat-row{grid-template-columns:1fr 1fr}
   .etf-name-col{display:none}
 }
+#costos-body th:first-child,#costos-body td:first-child{text-align:left}
 .tipo-pill{display:inline-block;font-size:10.5px;font-weight:500;padding:2px 8px;border-radius:20px;border:1px solid;white-space:nowrap}
 .stat-row.hero-row{grid-template-columns:repeat(3,1fr)}
 .stat.hero{padding:18px 16px}
@@ -154,6 +155,19 @@ tr:hover td{background:rgba(255,255,255,.02)}
 @media(max-width:600px){
   .stat.hero{padding:14px 6px}
   .stat.hero .stat-val{font-size:16px}
+}
+.tbl-wrap{overflow-x:auto}
+.tipo-inline{display:none;margin-top:5px}
+@media(max-width:600px){
+  #sec-aportes th:nth-child(3),#sec-aportes td:nth-child(3),
+  #sec-aportes th:nth-child(4),#sec-aportes td:nth-child(4){display:none}
+  #sec-aportes th,#sec-aportes td{padding:9px 7px}
+  #sec-aportes .tipo-inline{display:block}
+  #sec-aportes td:last-child{white-space:normal!important}
+  #sec-aportes .btn-edit,#sec-aportes .btn-del{display:block;margin-left:auto}
+  .stat-row.minor{grid-template-columns:1fr 1fr}
+  .stat-row.minor .stat:last-child:nth-child(odd){grid-column:1/-1}
+  #costos-body th,#costos-body td{padding:9px 6px;font-size:12px}
 }
 </style>
 </head>
@@ -537,14 +551,15 @@ function renderTabla() {
   tb.innerHTML = list.map(r => {
     const idx = records.indexOf(r);
     const col = TYPE_COLORS[r.tipo] || 'var(--muted)';
+    const pill = `<span class="tipo-pill" style="color:${col};border-color:color-mix(in srgb, ${col} 35%, transparent);background:color-mix(in srgb, ${col} 10%, transparent)">${TYPE_LABELS[r.tipo]||r.tipo}</span>`;
     const sign = typeof TYPE_SIGN[r.tipo]==='function' ? TYPE_SIGN[r.tipo](r) : (TYPE_SIGN[r.tipo]||'');
     const etfCol = ETF_COLORS[r.etf] || 'var(--muted)';
     const notaYaMencionaEtf = r.etf && r.desc.toLowerCase().includes(r.etf.toLowerCase());
     const clpTc = r.clp ? '$'+Math.round(r.clp).toLocaleString('es-CL')+' <span class="dim">· '+r.tc.toLocaleString('es-CL')+'</span>' : '';
     return `<tr>
       <td class="dim">${fmtFecha(r.fecha)}${r.hora ? ' <span style="color:var(--faint);font-size:11px">'+r.hora+'</span>' : ''}</td>
-      <td>${r.desc}${r.etf && !notaYaMencionaEtf ? ' <span class="mono" style="font-size:11px;color:'+etfCol+'">'+r.etf+'</span>' : ''}</td>
-      <td><span class="tipo-pill" style="color:${col};border-color:color-mix(in srgb, ${col} 35%, transparent);background:color-mix(in srgb, ${col} 10%, transparent)">${TYPE_LABELS[r.tipo]||r.tipo}</span></td>
+      <td>${r.desc}${r.etf && !notaYaMencionaEtf ? ' <span class="mono" style="font-size:11px;color:'+etfCol+'">'+r.etf+'</span>' : ''}<div class="tipo-inline">${pill}</div></td>
+      <td>${pill}</td>
       <td class="right mono dim">${clpTc}</td>
       <td class="right mono" style="color:${col}">${sign}${fmtU(Math.abs(r.monto))}${r.acciones ? '<div style="font-size:10px;color:var(--faint);font-weight:400">'+r.acciones+' acc.</div>' : ''}</td>
       <td class="right" style="white-space:nowrap">

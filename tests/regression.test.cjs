@@ -139,3 +139,14 @@ test('P2: las ponderaciones objetivo declaradas deben sumar 100%', () => {
   const app = loadApp();
   assert.equal(app.run('Object.values(ETF_TARGET).reduce((a,b) => a+b, 0)'), 100);
 });
+
+test('P1: valida movimientos reales en formato antes de importar', () => {
+  const app = loadApp();
+  const valido = fixture();
+  app.context.candidato = valido;
+  assert.equal(app.run('validarMovimiento(candidato)'), true);
+  app.context.candidato = fixture({ fecha: '31/02/2026' });
+  assert.equal(app.run('validarMovimiento(candidato)'), false);
+  app.context.candidato = fixture({ hora: '12:00<img src=x>' });
+  assert.equal(app.run('validarMovimiento(candidato)'), false);
+});

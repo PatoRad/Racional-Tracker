@@ -65,3 +65,8 @@ La suite simula Firebase, el almacenamiento y el navegador; no debe contactar lo
 No ejecutar pruebas destructivas contra datos reales, no publicar credenciales privadas y no modificar `main` desde la rama de auditoría. Evaluar los cambios mediante un pull request y pruebas antes de desplegar.
 
 > **Aviso:** las cifras son cálculos orientativos de un registro personal; no constituyen asesoría de inversión ni una conciliación certificada con el intermediario.
+
+
+## Auditoría Firebase / Firestore (Etapa 3)
+
+La rama `audit/firebase-firestore-seguridad` añade **reglas propuestas y pruebas de emulador**, sin cambiar ni desplegar las reglas reales de Firebase. **No aplicar `firestore.rules` a producción** hasta implementar Firebase Authentication y una ruta por usuario: la aplicación actual seguiría solicitando el documento heredado `libro`, al cual la propuesta deniega acceso. Los límites de esta auditoría y pasos de migración están en [docs/FIREBASE_SECURITY_AUDIT.md](docs/FIREBASE_SECURITY_AUDIT.md).

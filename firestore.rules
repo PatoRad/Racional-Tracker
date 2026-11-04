@@ -1,0 +1,33 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Ruta heredada. Mantener DENEGADA al aplicar estas reglas.
+    // No desplegar sin plan de migración/recuperación y autenticación.
+    match /libro/{documentId} {
+      allow read, write: if false;
+    }
+
+    // ESQUEMA FUTURO: cada cuenta autenticada accede solo a su espacio.
+    // La aplicación actual NO usa esta ruta ni inicia sesión. No activar
+    // el flujo de usuario hasta implementar Firebase Authentication.
+    match /users/{userId}/portfolios/{portfolioId} {
+      allow read: if request.auth != null
+                  && request.auth.uid == userId;
+
+      allow create, update: if request.auth != null
+                  && request.auth.uid == userId
+                  && request.resource.data.keys().hasOnly(['records'])
+                  && request.resource.data.keys().hasAll(['records'])
+                  && request.resource.data.records is list
+                  && request.resource.data.records.size() <= 10000;
+
+      allow delete: if false;
+    }
+
+    // Negar cualquier otra colección por defecto.
+    match /{path=**} {
+      allow read, write: if false;
+    }
+  }
+}

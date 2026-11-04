@@ -492,7 +492,7 @@ function validarMovimiento(r) {
   if (typeof r.desc !== 'string' || !r.desc.trim() || r.desc.length > 500) return false;
   if (typeof r.fecha !== 'string') return false;
   const parts = r.fecha.split('/');
-  if (parts.length !== 3 || parts[0].length !== 2 || parts[1].length !== 2 || parts[2].length !== 4 || parts.some(x => !/^\\d+$/.test(x))) return false;
+  if (parts.length !== 3 || parts[0].length !== 2 || parts[1].length !== 2 || parts[2].length !== 4 || parts.some(x => [...x].some(ch => ch < '0' || ch > '9'))) return false;
   const [dd,mm,yyyy] = parts.map(Number);
   const fecha = new Date(yyyy,mm-1,dd);
   if (fecha.getFullYear() !== yyyy || fecha.getMonth() !== mm-1 || fecha.getDate() !== dd) return false;
@@ -500,7 +500,7 @@ function validarMovimiento(r) {
     if (typeof r.hora !== 'string') return false;
     if (r.hora) {
       const horas = r.hora.split(':');
-      if (horas.length !== 2 || horas.some(x => x.length !== 2 || !/^\\d+$/.test(x)) || Number(horas[0]) > 23 || Number(horas[1]) > 59) return false;
+      if (horas.length !== 2 || horas.some(x => x.length !== 2 || [...x].some(ch => ch < '0' || ch > '9')) || Number(horas[0]) > 23 || Number(horas[1]) > 59) return false;
     }
   }
   if (r.etf !== undefined && (typeof r.etf !== 'string' || r.etf.length > 30)) return false;

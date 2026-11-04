@@ -1,35 +1,25 @@
-# Pruebas de regresión (rama de auditoría)
+# Pruebas de regresión aisladas
 
-Estas pruebas usan exclusivamente registros sintéticos. **No deben ejecutarse sobre la aplicación desplegada ni contra el proyecto Firebase real.**
+Ejecutar con **Node.js 20+** desde la raíz:
 
-## Ejecutar
-
-Requiere Node.js 20 o superior y no requiere instalar paquetes:
-
-```sh
+```bash
 node --test tests/regression.test.cjs
 ```
 
-La suite extrae el JavaScript integrado en `index.html` y lo evalúa con `node:vm` en un entorno simulado. Firestore, almacenamiento local, gráficos, diálogo e importación de archivos están reemplazados por simuladores. No se leen cuentas ni movimientos reales.
+Los casos extraen el JavaScript del `index.html` y lo cargan con `node:vm`. Firebase/Firestore, localStorage, Chart.js y FileReader son simulados. No hay conexión ni modificaciones a la base real.
 
-## Estado inicial (RED)
+## Casos
 
-La suite está diseñada para expresar el **comportamiento correcto esperado**, no para aprobar artificialmente el código existente.
+- Inicialización en entorno ficticio.
+- Escape HTML de descripciones.
+- Signos negativos de rendimientos.
+- Posición remanente de una venta parcial con ganancia.
+- Escape HTML de la hora importada.
+- Rechazo de una importación con monto inválido.
+- Ponderaciones objetivo que suman 100%.
 
-| Caso | Esperado con el código actual |
-| --- | --- |
-| Inicialización aislada | PASS |
-| Escape HTML de la descripción | PASS |
-| Rendimiento negativo conserva signo | FAIL: `fmtU` usa `Math.abs` |
-| Venta parcial rentable conserva posición abierta | FAIL: resta importes en lugar de valorar acciones |
-| Hora importada no genera HTML activo | FAIL: la hora se concatena sin escape |
-| JSON inválido no reemplaza registros | FAIL: solo valida que `records` sea un arreglo |
-| Objetivos suman 100 % | FAIL: los porcentajes suman 99 % |
+**Historial:** estas pruebas fueron incorporadas en la primera etapa, cuando cinco casos reproducían defectos. La rama de corrección modifica el código de la aplicación para superar los casos, pero la ejecución exacta de Node debe confirmarse en una máquina o CI. No hay un workflow automático publicado en esta etapa.
 
-**Importante:** estos fallos son regresiones reproducibles conocidas; no son un error de la infraestructura de pruebas. No se incorpora un workflow de CI que bloquee entregas hasta que se hayan aplicado las correcciones.
+## Límites
 
-## Alcance y límites
-
-Estas pruebas no verifican las reglas efectivas de Firebase, la autenticación, la configuración del hosting, compatibilidad con navegadores, incidencias de dependencias externas ni concurrencia real entre clientes. Todo ello exige evaluaciones separadas en un proyecto de prueba o emulador y jamás contra la base de producción.
-
-Mantener `main` sin cambios. El archivo `index.html` no se modifica en esta fase. No se crea ni fusiona un pull request.
+No prueban reglas efectivas de Firestore, permisos, concurrentes, recuperación del respaldo, dependencias CDN, compatibilidad real de navegador ni valores de mercado. Se requiere un entorno de desarrollo o emulador Firebase para las pruebas de integración. Nunca probar con movimientos financieros reales.

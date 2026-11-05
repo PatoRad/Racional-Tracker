@@ -3,6 +3,9 @@ on:
   push:
     branches:
       - feature/rebalanceador-aportes-seguro
+  pull_request:
+    branches:
+      - audit/firebase-firestore-seguridad
   workflow_dispatch:
 
 permissions:

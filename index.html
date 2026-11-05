@@ -218,12 +218,26 @@ tr:hover td{background:rgba(255,255,255,.02)}
   <!-- PORTAFOLIO -->
   <div id="sec-portafolio" class="section on">
     <div class="card" id="prox-card">
-      <div class="card-title">Este mes, todo el aporte a</div>
+      <div class="card-title">Referencia histórica por costo remanente (no es valor de mercado)</div>
+      <div class="dim" style="margin-bottom:10px">Este indicador anterior no considera precios actuales. Para decidir el próximo aporte, utiliza el simulador de valores de mercado que aparece debajo.</div>
       <div id="prox-body"></div>
       <div class="meta-input-row" style="justify-content:center;margin:12px 0 0">
         <label>Monto a comprar (USD, opcional)</label>
         <input type="number" id="prox-monto" placeholder="ej: 26.00" min="0" step="0.01" oninput="renderProximoAporte()"/>
       </div>
+    </div>
+    <!-- Simulador aislado: nunca escribe movimientos ni consulta cotizaciones -->
+    <div class="card" id="rebalanceador-card" style="text-align:left">
+      <div class="card-title">Simulador de próximo aporte · valores de mercado manuales</div>
+      <div class="dim" style="line-height:1.5;margin-bottom:12px">Introduce el valor actual en USD de cada ETF (no el costo de compra). Este cálculo no guarda ni envía los importes. El aporte completo se asigna a un solo ETF y no se venden posiciones.</div>
+      <div id="rebalanceador-valores" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:8px;margin-bottom:12px"></div>
+      <div class="meta-input-row" style="margin-bottom:10px">
+        <label for="rebalanceador-clp">Aporte (CLP)</label>
+        <input type="number" id="rebalanceador-clp" min="1" step="1" value="25000" oninput="renderRebalanceador()"/>
+        <label for="rebalanceador-tc">Tipo de cambio (CLP/USD)</label>
+        <input type="number" id="rebalanceador-tc" min="0.01" step="0.01" placeholder="ej: 950" oninput="renderRebalanceador()"/>
+      </div>
+      <div id="rebalanceador-resultado" class="dim" role="status" aria-live="polite">Ingresa los valores de mercado y el tipo de cambio para simular.</div>
     </div>
     <div class="etf-list" id="etf-list"></div>
     <div id="portafolio-nota" style="display:none;font-size:12px;color:var(--muted);margin:-12px 0 16px;padding:0 4px">
@@ -418,6 +432,7 @@ tr:hover td{background:rgba(255,255,255,.02)}
   </div>
 </div>
 
+<script src="rebalanceador.js"></script>
 <script>
 let records = [], tabFiltro = 'todos', sortOrden = 'recientes', editIdx = -1;
 let allocChart = null, lineChart = null;
@@ -782,6 +797,63 @@ function calcEtfReal() {
   return { pcts, compras: posicion, totalCompras, acciones };
 }
 
+// Simulador manual independiente del historial y la sincronización.
+function renderRebalanceador() {
+  const salida = document.getElementById('rebalanceador-resultado');
+  if (!salida || !window.RacionalRebalanceador) return;
+  const valoresUSD = {};
+  for (const etf of Object.keys(ETF_TARGET)) {
+    const input = document.getElementById('rebalanceador-valor-' + etf);
+    const raw = input && input.value.trim();
+    if (raw === '') {
+      salida.textContent = 'Introduce todos los valores actuales, incluido 0 para posiciones vacías.';
+      return;
+    }
+    valoresUSD[etf] = Number(raw);
+  }
+  const clp = Number(document.getElementById('rebalanceador-clp').value);
+  const tcRaw = document.getElementById('rebalanceador-tc').value;
+  const tc = tcRaw === '' ? NaN : Number(tcRaw);
+  if (!Number.isFinite(clp) || clp <= 0 || !Number.isFinite(tc) || tc <= 0) {
+    salida.textContent = 'Introduce un aporte CLP y un tipo de cambio válidos, ambos mayores que cero.';
+    return;
+  }
+  try {
+    const r = window.RacionalRebalanceador.calcularRebalanceo({
+      objetivos: ETF_TARGET, valoresUSD, aporteUSD: clp / tc
+    });
+    salida.textContent = 'Simulación: aportar ' + r.aporteUSD.toFixed(2) + ' USD a ' + r.etf
+      + '. Peso estimado después: ' + r.porcentajesDespues[r.etf].toFixed(2)
+      + '% (objetivo ' + ETF_TARGET[r.etf].toFixed(2)
+      + '%). Solo simulación; no se registró ningún movimiento.';
+  } catch (e) {
+    salida.textContent = 'No se puede calcular: ' + e.message;
+  }
+}
+function inicializarRebalanceador() {
+  const contenedor = document.getElementById('rebalanceador-valores');
+  if (!contenedor || contenedor.dataset.iniciado) return;
+  contenedor.dataset.iniciado = '1';
+  for (const etf of Object.keys(ETF_TARGET)) {
+    const field = document.createElement('div');
+    field.className = 'field';
+    const etiqueta = document.createElement('label');
+    etiqueta.htmlFor = 'rebalanceador-valor-' + etf;
+    etiqueta.textContent = etf + ' (USD)';
+    const input = document.createElement('input');
+    input.type = 'number';
+    input.id = 'rebalanceador-valor-' + etf;
+    input.min = '0';
+    input.step = '0.01';
+    input.placeholder = '0.00';
+    input.addEventListener('input', renderRebalanceador);
+    field.appendChild(etiqueta);
+    field.appendChild(input);
+    contenedor.appendChild(field);
+  }
+  renderRebalanceador();
+}
+
 function renderProximoAporte() {
   const body = document.getElementById('prox-body');
   if (!body) return;
@@ -1055,6 +1127,7 @@ document.addEventListener('keydown',e=>{
 const fechaLocal = new Date();
 document.getElementById('f-fecha').value = [fechaLocal.getFullYear(),String(fechaLocal.getMonth()+1).padStart(2,'0'),String(fechaLocal.getDate()).padStart(2,'0')].join('-');
 toggleClpFields();
+inicializarRebalanceador();
 </script>
 </body>
 </html>

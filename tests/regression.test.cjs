@@ -35,12 +35,13 @@ function loadApp(initialRecords = []) {
           value: '', textContent: '', innerHTML: '', className: '',
           style: {}, dataset: {},
           classList: { add() {}, remove() {}, toggle() {}, contains() { return false; } },
-          focus() {}
+          focus() {}, addEventListener() {}, appendChild() {}
         });
       }
       return elements.get(id);
     },
     querySelectorAll() { return []; },
+    createElement() { return { id:'', value:'', textContent:'', innerHTML:'', style:{}, dataset:{}, children:[], addEventListener(){}, appendChild(node){this.children.push(node);}, classList:{add(){},remove(){}} }; },
     addEventListener() {}
   };
   const firestore = {

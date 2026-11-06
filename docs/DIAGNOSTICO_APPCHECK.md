@@ -87,3 +87,14 @@ de identidad/proveedor/estado incorrectos y rechazo de claims inválidas o
 demasiado grandes. El token de la sesión del propietario necesita renovarse
 antes de verificar el permiso desde el cliente. Las reglas siguen bloqueadas;
 todavía no se adopta el esquema nuevo ni se considera completa la aplicación.
+
+## Publicación autorizada de reglas
+
+Posteriormente, tras captura de la sesión renovada del propietario y sus 19 tests
+de emulador aprobados, se autorizó y publicó el archivo de reglas revisado en
+Firestore (default). Firebase MCP terminó el trabajo `1793943179264` y verificó
+el contenido publicado el 6 de noviembre de 2026 a las 02:33 (America/Santiago).
+SHA-256 del candidato: 489d04716682497205d5d03955415101a4cf4358388f8ad44f08cc9d16af678f.
+Se guardaron copias locales antes y después. Main, datos, índices y enforcement
+no se modificaron. Falta la prueba del portafolio nuevo con el propietario;
+la publicación de reglas no acredita por sí sola guardado o importación reales.

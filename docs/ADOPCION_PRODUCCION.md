@@ -115,13 +115,29 @@ sintaxis JavaScript, valor exacto de la clave y configuración inmutable;
 https://github.com/PatoRad/Racional-Tracker/actions/runs/42159190202
 Esto NO verifica el proveedor real: los tests usan claves e identidades ficticias.
 
-Siguiente fase pendiente: autorización expresa para publicar únicamente las reglas
-v2 revisadas, sin merge a main. Prerrequisitos de Google, permiso privado y emisión
-de App Check confirmados por captura del propietario. La suite local de reglas
+Reglas v2 publicadas con autorización expresa del propietario el 6 de noviembre
+de 2026 a las 02:33 (America/Santiago), sin merge a main. Prerrequisitos de Google,
+permiso privado y emisión de App Check confirmados por captura del propietario.
+La suite local de reglas
 se repitió con éxito: 19 aprobadas, cero fallos y cero omitidas, en proyecto demo
 y emulador localhost:8088. Archivo propuesto SHA256:
 489d04716682497205d5d03955415101a4cf4358388f8ad44f08cc9d16af678f.
-Después se necesita verificar el portafolio nuevo con datos sintéticos acordados
-y coordinar respaldo/importación por el propietario. No importar movimientos,
-activar enforcement ni publicar reglas sin sus autorizaciones. El documento
-heredado debe permanecer cerrado.
+Firebase MCP confirmó mediante lectura posterior que el contenido publicado
+coincide exactamente con el archivo aprobado (normalizando únicamente saltos
+de línea y espacios finales). Copia local de las reglas previas, que deniegan
+el documento legado: `.tools/adoption/production-before.rules`. La publicación
+aisló la configuración a Firestore (default), sin índices ni otros servicios.
+No se consultaron documentos ni se migraron o escribieron movimientos.
+
+Siguiente fase: comprobar desde la sesión del propietario el portafolio nuevo,
+acordar una prueba con datos sintéticos y coordinar respaldo/importación por el
+propietario. No importar movimientos ni activar enforcement sin autorización.
+El documento heredado permanece cerrado por la regla de denegación general.
+
+Reversión segura: si falla la adopción, restaurar únicamente la copia previa
+de denegación tras autorización. Nunca restaurar el antiguo `if true`.
+
+Metadatos observados en lectura antes de publicar: protección contra eliminación
+de la base y recuperación a un punto en el tiempo deshabilitadas. No se cambiaron.
+Esto no acredita respaldo administrado; se mantiene como riesgo pendiente de
+evaluación separada de costos y requisitos, además del JSON externo del propietario.

@@ -1,0 +1,14 @@
+{
+  "name": "racional-tracker-audit",
+  "private": true,
+  "engines": {"node": ">=24.12.0"},
+  "scripts": {
+    "test": "node --test tests/regression.test.cjs",
+    "test:security": "firebase emulators:exec --project demo-racional-security-tests --only firestore \"node --test tests/firestore-security.test.cjs\""
+  },
+  "devDependencies": {
+    "@firebase/rules-unit-testing": "6.0.0",
+    "firebase": "13.2.0",
+    "firebase-tools": "15.35.0"
+  }
+}

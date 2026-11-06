@@ -1,0 +1,9 @@
+{
+  "score": 2,
+  "summary": "Evaluación solo de firestore.rules propuesto, NO de producción. Aislamiento por UID y denegación por defecto; validación incompleta y cliente incompatible.",
+  "findings": [
+    {"check":"Type Safety / Update Bypass","severity":"minor","issue":"create y update limitan la lista, pero no validan los objetos dentro de records; el propietario puede corromper sus datos.","recommendation":"Migrar a documentos de movimientos con campos, tipos y tamaños validados."},
+    {"check":"Storage Abuse","severity":"minor","issue":"No hay cuota agregada de portfolios por UID; lista de hasta 10000 elementos arbitrarios.","recommendation":"Definir límites de esquema, volumen y consumo."},
+    {"check":"Business Logic vs. Rules","severity":"major","issue":"El cliente actual no inicia sesión y usa libro, ruta denegada por la propuesta.","recommendation":"No desplegar; preparar identidad, rutas por UID, migración y reversión."}
+  ]
+}

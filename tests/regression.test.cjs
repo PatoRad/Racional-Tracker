@@ -25,9 +25,9 @@ function fixture(overrides = {}) {
   };
 }
 
-function loadApp(initialRecords = []) {
+function loadApp(initialRecords = [], options = {}) {
   const elements = new Map();
-  const mockWrites = [];
+  const mockWrites = []; const storage = new Map(Object.entries(options.storage || {})); let listener; let remote = structuredClone(initialRecords);
   const fakeDocument = {
     getElementById(id) {
       if (!elements.has(id)) {
@@ -44,11 +44,18 @@ function loadApp(initialRecords = []) {
     addEventListener() {}
   };
   const firestore = {
+    async runTransaction(callback) {
+      if (options.failWrite) throw new Error('offline');
+      return callback({
+        async get() { return {data:() => ({records:structuredClone(remote)})}; },
+        set(ref,payload) { mockWrites.push(JSON.stringify(payload)); remote = structuredClone(payload.records); }
+      });
+    },
     collection() {
       return {
         doc() {
           return {
-            onSnapshot() { /* Sin listener real */ },
+            onSnapshot(opts, callback) { listener = callback; },
             set(payload) {
               mockWrites.push(JSON.stringify(payload));
               return Promise.resolve();
@@ -69,7 +76,7 @@ function loadApp(initialRecords = []) {
   const context = vm.createContext({
     document: fakeDocument,
     firebase: { initializeApp() {}, firestore() { return firestore; } },
-    localStorage: { setItem() {}, getItem() { return null; } },
+    localStorage: { setItem(k,v) { if(options.storageFails) throw new Error('quota'); storage.set(k,v); }, getItem(k) { return storage.get(k) || null; } },
     window: {}, Chart: FakeChart, FileReader: FakeFileReader,
     setTimeout() {}, alert() {}, confirm() { return true; }
   });
@@ -80,7 +87,7 @@ function loadApp(initialRecords = []) {
     element: id => fakeDocument.getElementById(id),
     run: expression => vm.runInContext(expression, context, { timeout: 1000 }),
     context,
-    mockWrites
+    mockWrites, storage, snapshot(lista = remote, metadata = {}) { remote = structuredClone(lista); listener({data:() => ({records:structuredClone(remote)}), metadata}); }
   };
 }
 
@@ -149,4 +156,82 @@ test('P1: valida movimientos reales en formato antes de importar', () => {
   assert.equal(app.run('validarMovimiento(candidato)'), false);
   app.context.candidato = fixture({ hora: '12:00<img src=x>' });
   assert.equal(app.run('validarMovimiento(candidato)'), false);
+});
+
+test('sync: bloquea escrituras antes de recibir estado de servidor', async () => {
+  const app = loadApp([fixture()]);
+  assert.equal(await app.run('save()'), false);
+  assert.equal(app.mockWrites.length, 0);
+  assert.equal(JSON.parse(app.storage.get('libro_records_backup')).length, 1);
+});
+test('sync: transacción impide sobrescribir cambios de otro dispositivo', async () => {
+  const app = loadApp([fixture()]);
+  app.snapshot();
+  app.run('records.push({...records[0], monto:20})');
+  app.snapshot([fixture({monto:300})], {fromCache:true});
+  assert.equal(await app.run('save()'), false);
+  assert.equal(app.mockWrites.length, 0);
+  assert.equal(app.run('records.length'), 2);
+});
+test('sync: serializa guardados y conserva cada estado capturado', async () => {
+  const app = loadApp([fixture()]);
+  app.snapshot();
+  app.run('records.push({...records[0], monto:20}); first = save(); records.push({...records[0], monto:30}); second = save()');
+  assert.equal(await app.context.first, true);
+  assert.equal(await app.context.second, true);
+  assert.deepEqual(app.mockWrites.map(x => JSON.parse(x).records.length), [2,3]);
+});
+test('sync: un snapshot remoto no borra cambios locales fallidos', async () => {
+  const app = loadApp([fixture()], {failWrite:true});
+  app.snapshot();
+  app.run('records.push({...records[0], monto:20})');
+  assert.equal(await app.run('save()'), false);
+  app.snapshot([fixture({monto:900})]);
+  assert.equal(app.run('records.length'), 2);
+});
+test('backup: recuperar no escribe en nube y snapshots no lo reemplazan', () => {
+  const app = loadApp([], {storage:{libro_records_backup:JSON.stringify([fixture()])}});
+  app.run('recuperarRespaldo()');
+  app.snapshot([]);
+  assert.equal(app.run('records.length'), 1);
+  assert.equal(app.mockWrites.length, 0);
+});
+test('backup: contenido corrupto no modifica la vista', () => {
+  const app = loadApp([fixture()], {storage:{libro_records_backup:'invalid json'}});
+  app.run('recuperarRespaldo()');
+  assert.equal(app.run('records.length'), 1);
+  assert.equal(app.mockWrites.length, 0);
+});
+test('backup: almacenamiento lleno no impide guardado verificado en nube', async () => {
+  const app = loadApp([fixture()], {storageFails:true});
+  app.snapshot();
+  assert.equal(await app.run('save()'), true);
+  assert.match(app.element('store-status').textContent, /respaldo local no disponible/);
+});
+test('sync: rechaza datos remotos malformados sin borrar vista ni respaldo', () => {
+  const app = loadApp([fixture()]);
+  app.snapshot('invalid');
+  assert.equal(app.run('records.length'), 1);
+  assert.match(app.element('store-status').textContent, /inválidos/);
+});
+test('backup: recuperar copia anterior no cambia respaldo ni escribe en nube', () => {
+  const app = loadApp([], {storage:{libro_records_backup_anterior:JSON.stringify([fixture({monto:55})])}});
+  app.run('recuperarRespaldo(true)');
+  assert.equal(app.run('records[0].monto'),55);
+  assert.equal(app.mockWrites.length,0);
+});
+test('sync: snapshot de caché no habilita guardado remoto', async () => {
+  const app = loadApp([fixture()]);
+  app.snapshot([fixture()], {fromCache:true});
+  assert.equal(await app.run('save()'),false);
+  assert.equal(app.mockWrites.length,0);
+});
+test('importación: fallo de nube conserva vista importada y respaldo previo', async () => {
+  const app = loadApp([fixture()], {failWrite:true});
+  app.snapshot();
+  app.context.upload = {contents:JSON.stringify({records:[fixture({monto:44})]})};
+  app.run("importarJSON({target:{files:[upload],value:'fake.json'}})");
+  await app.run('colaGuardado');
+  assert.equal(app.run('records[0].monto'),44);
+  assert.equal(JSON.parse(app.storage.get('libro_records_backup_anterior'))[0].monto,100);
 });

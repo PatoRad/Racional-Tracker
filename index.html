@@ -177,7 +177,8 @@ tr:hover td{background:rgba(255,255,255,.02)}
   <div class="brand"><div class="brand-mark"></div>Libro</div>
   <div class="hdr-actions">
     <span id="store-status"></span>
-    <button class="btn" onclick="exportarJSON()">Exportar JSON</button>
+    <button class="btn" onclick="exportarJSON()">Exportar JSON</button><button class="btn" onclick="recuperarRespaldo()">Recuperar respaldo</button><button class="btn" onclick="recuperarRespaldo(true)">Respaldo anterior</button>
+
     <button class="btn" onclick="document.getElementById('import-file').click()">Importar JSON</button>
     <input type="file" id="import-file" accept="application/json" style="display:none" onchange="importarJSON(event)"/>
     <button class="btn" onclick="exportarExcel()">Exportar Excel</button>
@@ -447,34 +448,87 @@ firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
 const docRef = db.collection('libro').doc('9552cfc4c080106a828d392d3a08510b');
 
-let misEscrituraEnCurso = false; // evita que nuestro propio guardado dispare un "refresh" doble
+const BACKUP_KEY = 'libro_records_backup';
+let baseRemota = null, nubeLista = false, cambiosLocales = false;
+let colaGuardado = Promise.resolve();
+
+function guardarRespaldo(lista) {
+  try {
+    const previo = localStorage.getItem(BACKUP_KEY);
+    if (previo) localStorage.setItem(BACKUP_KEY + '_anterior', previo);
+    localStorage.setItem(BACKUP_KEY, JSON.stringify(lista));
+    return true;
+  } catch(e) { return false; }
+}
 
 setSt('Conectando...', 'var(--muted)');
-docRef.onSnapshot(
+docRef.onSnapshot({includeMetadataChanges:true},
   snap => {
-    if (misEscrituraEnCurso) { misEscrituraEnCurso = false; return; }
+    if (snap.metadata && (snap.metadata.hasPendingWrites || snap.metadata.fromCache)) return;
     const data = snap.data();
-    records = (data && data.records) || [];
-    try { localStorage.setItem('libro_records_backup', JSON.stringify(records)); } catch(e){}
+    const lista = data ? data.records : [];
+    if (!validarLista(lista)) {
+      nubeLista = false;
+      setSt('⚠ Datos remotos inválidos; exporta tu copia local', 'var(--red)');
+      return;
+    }
+    if (cambiosLocales) return;
+    // Conservar el respaldo anterior hasta que el usuario guarde explícitamente.
+    records = lista;
+    baseRemota = JSON.stringify(lista);
+    nubeLista = true;
     refresh();
     setSt('✔ Sincronizado', 'var(--green)', 2000);
   },
-  err => { setSt('⚠ Sin conexión — revisa tu internet', 'var(--red)'); }
+  err => { nubeLista = false; setSt('⚠ Nube no disponible; exporta tu copia local', 'var(--red)'); }
 );
 
-async function save() {
-  try { localStorage.setItem('libro_records_backup', JSON.stringify(records)); } catch(e){}
-  setSt('Guardando...', 'var(--muted)');
+function save() {
+  const lista = JSON.parse(JSON.stringify(records));
+  if (!validarLista(lista)) return Promise.resolve(false);
+  const respaldoOK = guardarRespaldo(lista);
+  cambiosLocales = true;
+  const guardar = async () => {
+    if (!nubeLista) {
+      setSt('⚠ Nube no disponible; exporta tus cambios locales', 'var(--red)');
+      return false;
+    }
+    setSt('Guardando...', 'var(--muted)');
+    try {
+      const esperado = baseRemota;
+      await db.runTransaction(async tx => {
+        const snap = await tx.get(docRef);
+        const data = snap.data();
+        const actual = data ? data.records : [];
+        if (!validarLista(actual) || JSON.stringify(actual) !== esperado) throw new Error('conflicto');
+        tx.set(docRef, {records:lista}, {merge:true});
+      });
+      baseRemota = JSON.stringify(lista);
+      cambiosLocales = JSON.stringify(records) !== baseRemota;
+      setSt(respaldoOK ? '✔ Guardado' : '✔ Nube guardada; respaldo local no disponible', 'var(--green)', 3000);
+      return true;
+    } catch(e) {
+      nubeLista = false;
+      setSt('⚠ Conflicto o error de nube; exporta tus cambios antes de recargar', 'var(--red)');
+      return false;
+    }
+  };
+  colaGuardado = colaGuardado.then(guardar, guardar);
+  return colaGuardado;
+}
+function validarLista(lista) {
+  return Array.isArray(lista) && lista.length <= 10000 && lista.every(validarMovimiento);
+}
+function recuperarRespaldo(anterior = false) {
   try {
-    misEscrituraEnCurso = true;
-    await docRef.set({ records });
-    setSt('✔ Guardado', 'var(--green)', 2000);
-    return true;
-  } catch(e) {
-    misEscrituraEnCurso = false;
-    setSt('⚠ No se pudo guardar', 'var(--red)', 3000);
-    return false;
-  }
+    const lista = JSON.parse(localStorage.getItem(BACKUP_KEY + (anterior ? '_anterior' : '')));
+    if (!validarLista(lista)) throw new Error('invalid');
+    if (!confirm('Recuperar el respaldo en la vista local? No se enviará automáticamente a la nube. Exporta JSON antes de recargar.')) return;
+    records = lista;
+    cambiosLocales = true;
+    refresh();
+    setSt('Respaldo recuperado localmente; exporta JSON para conservarlo', 'var(--muted)');
+  } catch(e) { alert('No hay un respaldo local válido disponible.'); }
 }
 
 function exportarJSON() {
@@ -521,14 +575,14 @@ function importarJSON(ev) {
         return;
       }
       if (!confirm('Esto reemplaza tus ' + records.length + ' movimientos actuales por los ' + data.records.length + ' del archivo. ¿Continuar?')) return;
-      const anterior = records;
+      if (records.length && !guardarRespaldo(records)) {
+        alert("Exporta JSON antes de importar: no hay respaldo local disponible."); return;
+      }
       records = data.records;
       refresh();
       const ok = await save();
       if (!ok) {
-        records = anterior;
-        refresh();
-        alert('Error al guardar en la nube. Se restauró la vista anterior.');
+        alert('No se guardó en la nube. Exporta la importación local antes de recargar; la copia previa sigue en el respaldo anterior.');
         return;
       }
       setSt('✔ Importado','var(--green)',2500);

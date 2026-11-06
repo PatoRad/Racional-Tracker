@@ -52,18 +52,39 @@ La prueba de seguridad aborta si FIRESTORE_EMULATOR_HOST no es localhost:8088 o
 127.0.0.1:8088. Solo usa demo-racional-security-tests y datos sintéticos.
 No ejecutar la app con credenciales o datos reales durante QA.
 
-## Auditoría de producción: evidencia que falta
+## Revisión básica de configuración de producción — 2026-11-06
 
-Para cerrar este pendiente se requiere una sesión autorizada de lectura del
-proyecto contabilidad-4f074 y recoger únicamente configuración:
-1. Release y ruleset de Firestore activos, con fecha/identificador de versión.
-2. Proveedores habilitados de Authentication, dominios autorizados y políticas.
-3. App Check: registro de la aplicación web, proveedor, site key pública y
-   enforcement real para Firestore (y Authentication si se usa ese producto).
+Evidencia: capturas de consola proporcionadas por el propietario, sin consultar
+documentos financieros ni probar acceso a ellos. Son observaciones de pantalla,
+no una exportación autenticada del ruleset mediante API.
 
-El servidor MCP instalado ya pudo iniciarse y se consultó firebase_get_environment en modo de solo lectura. El resultado fue Authenticated User: <NONE>, con el proyecto objetivo contabilidad-4f074 establecido localmente. No se obtuvo configuración de producción. Instalar el plugin no equivale a iniciar sesión o a tener permisos.
-Nunca solicitar contraseñas, tokens, service-account JSON o backups financieros
-para esta auditoría. No probar exposición leyendo un documento real.
+| Control | Evidencia observada |
+| --- | --- |
+| Firestore (default) | Versión superior seleccionada en historial: 2026-10-01 04:25 según consola. Ruta exacta del documento de libro con allow read, write: if true. |
+| App Check, aplicación web | Libro de Contabilidad: sin registrar, sin proveedor. |
+| App Check, Cloud Firestore | No se aplica. |
+| Authentication | Pantalla de agregar el primer método: ningún proveedor habilitado. |
+| Dominios autorizados | localhost, contabilidad-4f074.firebaseapp.com, contabilidad-4f074.web.app. |
+
+Hallazgo crítico: las reglas mostradas autorizan leer, modificar y eliminar ese
+documento sin sesión y App Check no se exige para Firestore. No se ha demostrado
+ni descartado acceso previo de terceros. La autorización abierta corresponde a
+esa ruta concreta; no se afirma lectura pública de cualquier colección.
+
+Si se mantiene GitHub Pages, el acceso con Google necesitará autorizar el host
+patorad.github.io. El dominio definitivo de despliegue aún debe confirmarse.
+No se añadió ningún dominio ni se habilitó ningún proveedor.
+
+La revisión básica de estos controles queda documentada. No equivale a una
+auditoría exhaustiva de IAM, actividad histórica, otras bases o hosting.
+El CLI/MCP continúa sin cuenta autenticada: tener una sesión en Edge no inicia
+sesión en la integración. Su acceso no es necesario para interpretar las capturas,
+pero sí para ejecutar verificaciones administrativas por API en otra fase.
+
+Respaldo: el propietario confirmó el 2026-11-06 que conserva una copia externa.
+El agente no recibió el JSON ni verificó su contenido, integridad o recuento.
+Véase [ADOPCION_PRODUCCION.md](ADOPCION_PRODUCCION.md) para contención propuesta,
+adopción y reversión. No se ha autorizado ni ejecutado ningún cambio de producción.
 
 ## Adopción futura: requiere intervención explícita
 
@@ -115,7 +136,7 @@ tardías de sesiones anteriores; esos cambios requieren la ejecución siguiente.
 Prueba de navegador local: pantalla de acceso bloqueada correctamente al faltar
 la site key, portafolio oculto, sin errores ni advertencias de consola.
 No se inició Firebase ni se leyó el documento heredado en esa comprobación.
-## Acceso que falta para cerrar producción
+## Historial del acceso técnico por CLI/MCP
 
 El servidor Firebase MCP 15.35.0 pudo iniciarse. Se invocó solamente la herramienta
 firebase_get_environment, declarada de lectura. Resultado: Authenticated User:
@@ -156,7 +177,5 @@ También se ejecutó el emulador local con el proyecto demo tras completar la
 instalación; se detuvo correctamente al terminar. El servidor HTTP de QA se cerró.
 Main permanece en d22b3790188907481bfd7f5df8885689ee904e6f.
 
-Estado de adopción: NO desplegado. Pendiente iniciar sesión Firebase, auditar
-configuración real, preparar Google/dominio/App Check y autorizar el UID del
-propietario en un procedimiento separado. Ni las pruebas ni el resultado de
+Estado de adopción: NO desplegado. La revisión básica de configuración real se completó después mediante capturas (véase la sección del 2026-11-06). Siguen pendientes la contención autorizada, el acceso técnico cuando corresponda, Google/dominio/App Check, ensayo y autorización del UID del propietario. Ni las pruebas ni el resultado de
 get_environment prueban reglas o enforcement de producción.

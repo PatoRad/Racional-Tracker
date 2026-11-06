@@ -1,0 +1,5 @@
+{
+  "score": 5,
+  "summary": "Revisión del archivo firestore.rules SHA256 489d04716682497205d5d03955415101a4cf4358388f8ad44f08cc9d16af678f: no se detectaron accesos entre propietarios, privilegios asignables mediante documentos ni bypass de validación entre create y update. Propiedad por UID y claim administrativo, campos y tamaños limitados, y revisión atómica obligatoria. El 6 de noviembre de 2026 se aprobaron 19 pruebas locales del emulador. Esta evaluación se limita al modelo y pruebas revisados; no es una garantía absoluta ni demuestra funcionamiento en producción. App Check permanece sin enforcement y se verifica por separado.",
+  "findings": []
+}

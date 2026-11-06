@@ -105,10 +105,9 @@ al código ya comprobado; no se repiten suites por una edición documental.
 - Site key pública entregada por texto e incorporada a app-config.js en
   77d7e8e50bb7f9188a59029069750cde8685fdc3, manteniendo requireAppCheck=true.
   Diff verificado: solo ese archivo de configuración y comentarios.
-- El enforcement de Firestore no se ha vuelto a verificar; el último estado
-  observado era No se aplica. No se ha instruido activarlo todavía.
-- Cuenta personal con trackerAccess: concedido el 6 de noviembre de 2026 con autorización expresa; identidad Google, correo verificado y coincidencia con el administrador del CLI comprobados. Lectura administrativa posterior confirmó el permiso; falta comprobar renovación del token en el navegador del propietario.
-- Cliente nuevo: no publicado; main sin cambios por este trabajo.
+- El CLI oficial confirmó el 6 de noviembre que Firestore y Authentication tienen App Check Unenforced. No se ha autorizado activarlo todavía.
+- Cuenta personal con trackerAccess: concedido el 6 de noviembre de 2026 con autorización expresa; identidad Google, correo verificado y coincidencia con el administrador del CLI comprobados. Lectura administrativa posterior confirmó el permiso. La captura posterior del propietario muestra «Cuenta autorizada para Racional Tracker» y «App Check entregó un token» en la sesión renovada.
+- Cliente nuevo: publicado solo en canal temporal autorizado; main sin cambios por este trabajo.
 
 Verificaciones del cambio de clave:
 sintaxis JavaScript, valor exacto de la clave y configuración inmutable;
@@ -116,8 +115,13 @@ sintaxis JavaScript, valor exacto de la clave y configuración inmutable;
 https://github.com/PatoRad/Racional-Tracker/actions/runs/42159190202
 Esto NO verifica el proveedor real: los tests usan claves e identidades ficticias.
 
-Siguiente fase pendiente: aprobar y preparar una publicación controlada de prueba
-en el dominio autorizado, sin merge a main; comprobar Google y App Check con la
-cuenta propietaria; habilitar administrativamente solo su UID; coordinar reglas
-v2 y cliente. No importar movimientos ni activar enforcement antes de resolver
-esos pasos y sus autorizaciones. El documento heredado debe permanecer cerrado.
+Siguiente fase pendiente: autorización expresa para publicar únicamente las reglas
+v2 revisadas, sin merge a main. Prerrequisitos de Google, permiso privado y emisión
+de App Check confirmados por captura del propietario. La suite local de reglas
+se repitió con éxito: 19 aprobadas, cero fallos y cero omitidas, en proyecto demo
+y emulador localhost:8088. Archivo propuesto SHA256:
+489d04716682497205d5d03955415101a4cf4358388f8ad44f08cc9d16af678f.
+Después se necesita verificar el portafolio nuevo con datos sintéticos acordados
+y coordinar respaldo/importación por el propietario. No importar movimientos,
+activar enforcement ni publicar reglas sin sus autorizaciones. El documento
+heredado debe permanecer cerrado.

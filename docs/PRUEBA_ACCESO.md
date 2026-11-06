@@ -57,7 +57,9 @@ Authentication y en la clave Enterprise. Actualmente solo se confirmó
    6 de noviembre de 2026, con autorización expresa y verificación de Google,
    correo y coincidencia con la cuenta administrativa del CLI. El procedimiento
    conservó las claims existentes y verificó el resultado. Falta comprobar la
-   renovación del token en el navegador del propietario.
+   renovación del token en el navegador del propietario: confirmada posteriormente
+   por captura que muestra «Cuenta autorizada para Racional Tracker» y emisión
+   correcta de App Check. Este requisito está completado.
 4. Adoptar las reglas nuevas y verificar aislamiento por cuenta según el plan
    de producción. El documento legado continúa bloqueado.
 5. Comprobar alta/edición/sincronización usando datos sintéticos acordados y

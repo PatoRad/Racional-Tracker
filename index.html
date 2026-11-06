@@ -941,7 +941,7 @@ function calcCostoPromedio() {
   const res = {};
   let sinAcc = 0;
   records
-    .filter(r => (r.tipo === 'compra' || r.tipo === 'venta') && r.etf && ETF_TARGET[r.etf])
+    .filter(r => (r.tipo === 'compra' || r.tipo === 'venta') && r.etf && Object.prototype.hasOwnProperty.call(ETF_TARGET,r.etf))
     .sort((a, b) => parseFechaHora(a) - parseFechaHora(b))
     .forEach(r => {
       if (!r.acciones) { sinAcc++; return; }

@@ -70,3 +70,11 @@ test('P1: valida movimientos reales en formato antes de importar', async () => {
   assert.equal(app.run('validarMovimiento(candidato)'), false);
 });
 
+
+test('nombre de activo heredado de Object.prototype no contamina cálculos ni prototipos', async () => {
+  const app = await loadApp([fixture({tipo:'compra',etf:'__proto__',acciones:1})]);
+  app.run('calcCostoPromedio()');
+  assert.equal(app.run("Object.prototype.hasOwnProperty.call(Object.prototype,'acc')"),false);
+  assert.equal(app.run("Object.prototype.hasOwnProperty.call(Object.prototype,'costo')"),false);
+  assert.equal(app.run('calcEtfReal().totalCompras'),0);
+});

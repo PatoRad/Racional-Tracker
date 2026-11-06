@@ -136,3 +136,8 @@ lectura no están expuestas por este servidor MCP.
 
 No se aceptaron términos de Gemini, no se cambió IAM y no se creó ninguna cuenta
 de Authentication ni se asignó trackerAccess en producción durante este trabajo.
+Revisión adicional: se reprodujo con un test fallido un defecto al usar __proto__
+como nombre de activo: calcCostoPromedio trataba propiedades heredadas como ETF
+objetivo y podía alterar Object.prototype dentro de la aplicación. Se corrigió
+usando una comprobación de propiedad propia, igual que en calcEtfReal.
+El caso queda como regresión permanente con datos sintéticos.

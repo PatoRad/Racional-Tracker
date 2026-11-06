@@ -20,6 +20,11 @@
       'appCheck/fetch-status-error': 'El servidor de App Check rechazó la solicitud. Hay que revisar el registro de la app y la clave Enterprise.',
       'appCheck/recaptcha-error': 'reCAPTCHA no completó la verificación. Hay que comprobar la clave y los dominios permitidos.'
     };
+    // Google may embed the blocked referrer URL in a dynamic Auth code.
+    // Classify that family without reflecting the URL or arbitrary server text.
+    if (typeof error?.code === 'string' && error.code.startsWith('auth/requests-from-referer-') && error.code.endsWith('-are-blocked.')) {
+      return 'No se completó el acceso (API_KEY_HTTP_REFERRER_BLOCKED). La clave de API no permite el origen de esta página. Hay que revisar sus restricciones de sitios web.';
+    }
     const code = typeof error?.code === 'string' && /^(?:auth|appCheck)\/[a-z][a-z0-9.-]{0,95}$/.test(error.code) ? error.code : null;
     if (code && !Object.prototype.hasOwnProperty.call(hints, code)) {
       return 'No se completó el acceso (' + code + '). Comparte únicamente este código para revisar la causa.';

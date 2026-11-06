@@ -24,6 +24,6 @@ fs.writeFileSync(path.join(dir, 'manifest.json'), JSON.stringify(manifest, null,
 fs.writeFileSync(path.join(dir, 'firebase.json'), JSON.stringify({hosting:{
   public:'public', site:'contabilidad-4f074',
   ignore:['firebase.json','**/.*','**/node_modules/**'],
-  headers:[{source:'**',headers:[{key:'Cache-Control',value:'no-store'},{key:'X-Content-Type-Options',value:'nosniff'},{key:'Referrer-Policy',value:'no-referrer'}]}]
+  headers:[{source:'**',headers:[{key:'Cache-Control',value:'no-store'},{key:'X-Content-Type-Options',value:'nosniff'},{key:'Referrer-Policy',value:'strict-origin-when-cross-origin'}]}]
 }}, null, 2) + '\n');
 console.log(JSON.stringify({prepared:true, deployed:false, directory:dir, files:manifest}, null, 2));

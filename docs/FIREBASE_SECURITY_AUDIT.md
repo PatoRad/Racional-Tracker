@@ -36,7 +36,7 @@ Requisitos: Node.js, Firebase CLI, paquete `@firebase/rules-unit-testing` y el e
 firebase emulators:exec --project demo-racional-security-tests --only firestore "node --test tests/firestore-security.test.cjs"
 ```
 
-Las pruebas comprueban acceso anónimo, acceso de propietarios, aislamiento entre usuarios, estructura documental y bloqueo de borrados. Para evitar falsas garantías, si falta `@firebase/rules-unit-testing` el archivo marca los casos como omitidos; **una ejecución con pruebas omitidas NO equivale a una auditoría superada**. Si el emulador no está activo se aborta, evitando peticiones a producción.
+Las pruebas comprueban acceso anónimo, acceso de propietarios, aislamiento entre usuarios, estructura documental y bloqueo de borrados. Si falta `@firebase/rules-unit-testing`, la suite falla al cargar; no se permite un verde con todos los casos omitidos. Si el emulador no está activo se aborta, evitando peticiones a producción.
 
 ## Plan de adopción (no ejecutado)
 
@@ -53,4 +53,48 @@ Las pruebas comprueban acceso anónimo, acceso de propietarios, aislamiento entr
 - Colisión / pérdida de actualizaciones por sobrescritura del documento completo.
 - Ausencia de recuperación comprobada de la copia local.
 - No se confirmó App Check ni se actualizaron dependencias externas.
-- No se ha ejecutado aún la suite real del emulador ni una prueba de navegador.
+- La suite original del emulador pasó en CI (7/7); la prueba de navegador con autenticación sigue pendiente.
+
+## Validación del punto 4 — 2026-11-05
+
+Commit original: `b3f73f5a01cac3c4823dc0399d6e141e6ad4a392`.
+- [Push de la rama feature: ejecución 42113763747](https://github.com/PatoRad/Racional-Tracker/actions/runs/42113763747): ambas tareas correctas.
+- [PR #1: ejecución 42113771127](https://github.com/PatoRad/Racional-Tracker/actions/runs/42113771127): 21/21 pruebas sintéticas y 7/7 del emulador, cero fallos y cero omisiones.
+- Los mensajes PERMISSION_DENIED corresponden a denegaciones esperadas por assertFails. El script terminó con código 0. El emulador compiló las reglas.
+- El conflicto previo Firebase 11 / rules-unit-testing 5 ya está resuelto en el commit original con Firebase 12.
+- PR #1 continúa abierto, en borrador, dirigido a audit/firebase-firestore-seguridad.
+- No se ejecutó localmente: este workspace no dispone de Node/npm/git. La ejecución verificable se hace en GitHub Actions, con Java 21 y proyecto demo; no se requieren credenciales Firebase.
+
+### Corrección en rama independiente
+
+`fix/firestore-security-validation` deriva del commit original. La suite falla si faltan dependencias o si el host no es localhost/127.0.0.1:8088. Amplía cobertura de consultas, creación y actualización entre usuarios, esquema en create/update, límite 10000/10001, inyección de role, rutas desconocidas, subcolecciones y escrituras heredadas. No cambia reglas ni el cliente.
+
+### Evaluación de seguridad y límite de la validación
+
+```json
+{
+  "score": 4,
+  "summary": "Aislamiento por UID y esquema exterior comprobables en emulador; propuesta sin validar en producción.",
+  "findings": [
+    {
+      "check": "Type Safety / Storage Abuse",
+      "severity": "minor",
+      "issue": "records limita la lista a 10000 elementos pero admite valores arbitrarios dentro de ella; el propietario puede corromper sus propios registros.",
+      "recommendation": "Definir un esquema de movimientos y validar cada documento individual antes de adoptar las reglas."
+    }
+  ]
+}
+```
+
+La aceptación de listas numéricas en el caso de límite documenta el contrato actual, no valida movimientos financieros. No se cambia ese contrato sin diseñar la migración. Roles y ownerId añadidos al documento se rechazan por hasOnly; la autoridad procede de request.auth.uid. No hay contadores, estados ni timestamps definidos en este modelo, por lo que no se afirma cobertura de esas propiedades. Las subcolecciones desconocidas se deniegan; los portafolios no exigen documento padre users existente, por diseño basado en UID.
+
+### Pendiente en Firebase real (no ejecutado, fuera de este cierre)
+
+1. Revisar las reglas efectivamente desplegadas, proveedores Auth, App Check y configuración administrativa; su estado sigue desconocido.
+2. Implementar y probar inicio/cierre de sesión, expiración y rutas por UID en un entorno aislado.
+3. Definir esquema por movimiento, límites de campos y estrategia frente a escrituras concurrentes.
+4. Preparar backup, migración y reversión verificables antes de bloquear la ruta heredada.
+5. Validar cliente y reglas juntos con datos ficticios; revisar dependencias de CI (hay avisos de deprecación).
+6. Cualquier despliegue real requiere otra tarea y autorización. No desplegar estas reglas con el cliente actual.
+
+El cierre del punto 4 cubre pruebas de la propuesta en emulador, no certifica la seguridad ni compatibilidad del Firebase real. No se leyeron datos financieros, no se modificó main, no hubo merge ni despliegue.

@@ -3,6 +3,7 @@ on:
   push:
     branches:
       - feature/rebalanceador-aportes-seguro
+      - fix/firestore-security-validation
   pull_request:
     branches:
       - audit/firebase-firestore-seguridad

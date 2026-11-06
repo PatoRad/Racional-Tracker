@@ -18,7 +18,7 @@ Los casos extraen el JavaScript del `index.html` y lo cargan con `node:vm`. Fire
 - Rechazo de una importación con monto inválido.
 - Ponderaciones objetivo que suman 100%.
 
-**Historial:** estas pruebas fueron incorporadas en la primera etapa, cuando cinco casos reproducían defectos. La rama de corrección modifica el código de la aplicación para superar los casos, pero la ejecución exacta de Node debe confirmarse en una máquina o CI. No hay un workflow automático publicado en esta etapa.
+**Historial:** estas pruebas fueron incorporadas en la primera etapa, cuando cinco casos reproducían defectos. La rama de corrección modifica el código de la aplicación para superar los casos, pero la ejecución exacta de Node debe confirmarse en una máquina o CI. El workflow .github/workflows/pruebas-rebalanceador.yml ejecuta las suites sintéticas y el emulador; véase docs/FIREBASE_SECURITY_AUDIT.md para evidencia y límites.
 
 ## Límites
 

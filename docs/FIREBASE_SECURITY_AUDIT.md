@@ -98,3 +98,10 @@ La aceptación de listas numéricas en el caso de límite documenta el contrato 
 6. Cualquier despliegue real requiere otra tarea y autorización. No desplegar estas reglas con el cliente actual.
 
 El cierre del punto 4 cubre pruebas de la propuesta en emulador, no certifica la seguridad ni compatibilidad del Firebase real. No se leyeron datos financieros, no se modificó main, no hubo merge ni despliegue.
+
+### Resultado de la suite ampliada
+
+[GitHub Actions 42139532367](https://github.com/PatoRad/Racional-Tracker/actions/runs/42139532367), commit `da4ea2d7974a0350fdcb0a16e42c005020951197`, comprobado el 2026-11-05 (America/Santiago):
+- firestore-emulador: 14 pruebas, 14 aprobadas, 0 fallos, 0 omitidas; salida 0.
+- pruebas-sinteticas: tarea completada correctamente.
+- El punto 4 queda completado para la validación de las reglas propuestas en emulador, con los límites y pendientes anteriores.

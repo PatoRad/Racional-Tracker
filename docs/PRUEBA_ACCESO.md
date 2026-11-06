@@ -9,9 +9,11 @@ confirmada como sincronizada. Importación de 220 registros en un destino vacío
 realizada por el propietario, con normalización de formato de dos fechas y
 persistencia confirmada tras recargar. No se inspeccionaron valores financieros.
 CI del candidato da9f2e1: 72 pruebas de cliente y 22 de emulador aprobadas.
-Pendientes: autorización/activación de enforcement de App Check en Firestore,
-verificación posterior de acceso, respaldo versionado del propietario y revisión
-final del PR/main. Los apartados siguientes conservan la evidencia de preparación.
+Enforcement de App Check de Firestore autorizado y activado a las 03:30 de Chile
+del 6 de noviembre: lectura posterior `Enforced`, con Auth y replay sin cambios.
+Pendientes: verificación posterior de acceso una vez propagado (hasta 03:45),
+respaldo versionado del propietario y revisión final del PR/main.
+Los apartados siguientes conservan la evidencia de preparación.
 
 ## Evidencia del 6 de noviembre de 2026
 

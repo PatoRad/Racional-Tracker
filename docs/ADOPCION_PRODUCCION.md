@@ -143,13 +143,19 @@ movimientos o sus valores; la persistencia real es evidencia del propietario.
 Última suite del candidato da9f2e1: 72 tests de cliente y 22 de emulador aprobados
 en CI (run 42174120286).
 
-Siguiente fase: exigir App Check exclusivamente en Firestore, pendiente de
-autorización expresa. La nueva lectura del CLI confirmó todavía `Unenforced`,
-con replay protection `Off`. Cambio propuesto: `appcheck:services:set firestore
-enforced`, sin parámetro de replay ni cambios a Authentication. Los clientes
-sin token de App Check válido serán rechazados además de las reglas actuales.
-No se ha ejecutado ese cambio. Después verificar el acceso del propietario y
-preparar revisión final del PR antes de main. Mantener el respaldo original y
+El propietario autorizó exigir App Check exclusivamente en Firestore. Se ejecutó
+el comando oficial `appcheck:services:set firestore enforced`, sin parámetro de
+replay ni cambios a Authentication. Lectura posterior verificada:
+Firestore `Enforced`, replay `Off`, updateTime 2026-11-06T06:30:08.927903Z;
+Authentication `Unenforced`, replay `Off`, updateTime anterior sin cambios.
+Se realizó a las 03:30 America/Santiago; puede tardar hasta 15 minutos en
+propagarse (03:45). No se consultaron ni modificaron movimientos en este paso.
+
+Siguiente fase: verificar acceso y CRUD sintético del propietario después de
+propagarse la exigencia, y preparar revisión final del PR antes de main.
+El estado de configuración verificado no demuestra por sí solo el rechazo
+efectivo de peticiones sin token ni la continuidad de acceso del cliente.
+Mantener el respaldo original y
 exportar una copia versionada desde el cliente nuevo por acción del propietario.
 El documento heredado permanece cerrado por la regla de denegación general.
 

@@ -1,0 +1,18 @@
+{
+  "project": "contabilidad-4f074",
+  "authorization": "Propietario autorizó expresamente activar exigencia solo en Firestore",
+  "firestore": {
+    "before": "UNENFORCED",
+    "after": "ENFORCED",
+    "replayProtection": "OFF",
+    "updateTime": "2026-11-06T06:30:08.927903Z"
+  },
+  "authentication": {
+    "before": "UNENFORCED",
+    "after": "UNENFORCED",
+    "replayProtection": "OFF",
+    "updateTimeUnchanged": "2026-11-06T03:03:55.516623Z"
+  },
+  "verification": "Lectura posterior del CLI oficial; sin consultar documentos",
+  "pending": "Comprobar acceso del propietario después de propagación, hasta 03:45 America/Santiago del 6 de noviembre de 2026. La lectura administrativa no demuestra por sí sola el comportamiento de peticiones de clientes."
+}

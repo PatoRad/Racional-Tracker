@@ -1,7 +1,7 @@
-name: Auditoría de sincronización y reglas
+name: Cuentas seguras y reglas
 on:
   push:
-    branches: ['audit/sincronizacion-respaldo-seguro']
+    branches: ['audit/cuentas-seguras']
   pull_request:
 permissions:
   contents: read
@@ -18,6 +18,6 @@ jobs:
         with:
           distribution: temurin
           java-version: '21'
-      - run: npm install --ignore-scripts --no-audit --no-fund --package-lock=false
+      - run: npm ci --ignore-scripts --no-audit --no-fund
       - run: npm test
       - run: npm run test:security

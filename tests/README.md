@@ -1,25 +1,15 @@
-# Pruebas de regresión aisladas
+# Pruebas de cuentas seguras
 
-Ejecutar con **Node.js 20+** desde la raíz:
+Node >=24.12, npm y Java 21 para el emulador.
+npm ci --ignore-scripts
+npm test
+npm run test:security
 
-```bash
-node --test tests/regression.test.cjs
-```
+regression.test.cjs conserva cálculos/escape/validación anteriores.
+account.test.cjs prueba la UI y AccountStore con servicios y DOM simulados.
+helpers.cjs contiene exclusivamente identidades, registros y almacenamiento ficticios.
+firestore-security.test.cjs usa el emulador demo, prueba reglas y transacciones con
+el SDK real. Aborta si el host no es loopback:8088. No usa credenciales de producción.
 
-Los casos extraen el JavaScript del `index.html` y lo cargan con `node:vm`. Firebase/Firestore, localStorage, Chart.js y FileReader son simulados. No hay conexión ni modificaciones a la base real.
-
-## Casos
-
-- Inicialización en entorno ficticio.
-- Escape HTML de descripciones.
-- Signos negativos de rendimientos.
-- Posición remanente de una venta parcial con ganancia.
-- Escape HTML de la hora importada.
-- Rechazo de una importación con monto inválido.
-- Ponderaciones objetivo que suman 100%.
-
-**Historial:** estas pruebas fueron incorporadas en la primera etapa, cuando cinco casos reproducían defectos. La rama de corrección modifica el código de la aplicación para superar los casos, pero la ejecución exacta de Node debe confirmarse en una máquina o CI. No hay un workflow automático publicado en esta etapa.
-
-## Límites
-
-No prueban reglas efectivas de Firestore, permisos, concurrentes, recuperación del respaldo, dependencias CDN, compatibilidad real de navegador ni valores de mercado. Se requiere un entorno de desarrollo o emulador Firebase para las pruebas de integración. Nunca probar con movimientos financieros reales.
+No hay omisiones silenciosas. OAuth, App Check y producción requieren verificación
+independiente: véase docs/CUENTAS_SEGURAS.md.

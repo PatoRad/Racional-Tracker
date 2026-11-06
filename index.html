@@ -6,8 +6,12 @@
 <title>Libro — Portafolio</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/firebase/12.3.0/firebase-app-compat.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/firebase/12.3.0/firebase-firestore-compat.min.js"></script>
+<script src="https://www.gstatic.com/firebasejs/13.2.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/13.2.0/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/13.2.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/13.2.0/firebase-app-check-compat.js"></script>
+<script src="app-config.js"></script>
+<script src="account-store.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,500;8..60,600&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet"/>
 <style>
 :root {
@@ -176,16 +180,28 @@ tr:hover td{background:rgba(255,255,255,.02)}
 <header>
   <div class="brand"><div class="brand-mark"></div>Libro</div>
   <div class="hdr-actions">
-    <span id="store-status"></span>
+    <span id="store-status" role="status" aria-live="polite"></span>
+    <span id="account-label"></span>
+    <button class="btn" id="signout-btn" onclick="cerrarSesion()" hidden>Cerrar sesión</button>
+    <span id="private-actions" hidden>
     <button class="btn" onclick="exportarJSON()">Exportar JSON</button><button class="btn" onclick="recuperarRespaldo()">Recuperar respaldo</button><button class="btn" onclick="recuperarRespaldo(true)">Respaldo anterior</button>
 
     <button class="btn" onclick="document.getElementById('import-file').click()">Importar JSON</button>
     <input type="file" id="import-file" accept="application/json" style="display:none" onchange="importarJSON(event)"/>
     <button class="btn" onclick="exportarExcel()">Exportar Excel</button>
+    </span>
   </div>
 </header>
 
-<div class="main">
+<div id="auth-panel" class="main">
+  <div class="setup-card">
+    <h1 class="serif">Tu portafolio, en tu cuenta</h1>
+    <p>Inicia sesión con Google para acceder a tus movimientos. Cada cuenta tiene su propio espacio.</p>
+    <button class="btn primary" id="signin-btn" onclick="iniciarSesion()" disabled>Continuar con Google</button>
+    <p id="auth-message" role="status">Comprobando disponibilidad…</p>
+  </div>
+</div>
+<div class="main" id="app-main" hidden>
 
   <div class="kpis">
     <div class="kpi">
@@ -444,95 +460,113 @@ const firebaseConfig = {
   messagingSenderId: "741866902877",
   appId: "1:741866902877:web:191716e734a4793b40c4b4"
 };
-firebase.initializeApp(firebaseConfig);
-const db = firebase.firestore();
-const docRef = db.collection('libro').doc('9552cfc4c080106a828d392d3a08510b');
-
-const BACKUP_KEY = 'libro_records_backup';
-let baseRemota = null, nubeLista = false, cambiosLocales = false;
+let store = null, auth = null, sesion = null, closing = false;
 let colaGuardado = Promise.resolve();
-
-function guardarRespaldo(lista) {
-  try {
-    const previo = localStorage.getItem(BACKUP_KEY);
-    if (previo) localStorage.setItem(BACKUP_KEY + '_anterior', previo);
-    localStorage.setItem(BACKUP_KEY, JSON.stringify(lista));
-    return true;
-  } catch(e) { return false; }
+function guardarRespaldo(lista) { return store ? store.backup(lista) : false; }
+function puedeEditar() {
+  if (!store || !store.uid || !store.loaded || closing) {
+    alert('Espera a que cargue tu portafolio antes de editar.');
+    return false;
+  }
+  return true;
 }
-
-setSt('Conectando...', 'var(--muted)');
-docRef.onSnapshot({includeMetadataChanges:true},
-  snap => {
-    if (snap.metadata && (snap.metadata.hasPendingWrites || snap.metadata.fromCache)) return;
-    const data = snap.data();
-    const lista = data ? data.records : [];
-    if (!validarLista(lista)) {
-      nubeLista = false;
-      setSt('⚠ Datos remotos inválidos; exporta tu copia local', 'var(--red)');
-      return;
-    }
-    if (cambiosLocales) return;
-    // Conservar el respaldo anterior hasta que el usuario guarde explícitamente.
-    records = lista;
-    baseRemota = JSON.stringify(lista);
-    nubeLista = true;
-    refresh();
-    setSt('✔ Sincronizado', 'var(--green)', 2000);
-  },
-  err => { nubeLista = false; setSt('⚠ Nube no disponible; exporta tu copia local', 'var(--red)'); }
-);
-
+function limpiarVistaPrivada() {
+  records = []; closeModal();
+  for (const id of ['f-desc','f-monto','f-clp','f-tc','f-hora','f-acciones','f-etf-otro','m-desc','m-monto','m-clp','m-tc','m-hora','m-acciones','m-etf-otro','meta-inp','prox-monto','valor-actual-inp']) {
+    document.getElementById(id).value = '';
+  }
+  document.getElementById('form-wrap').style.display = 'none';
+  refresh();
+}
+async function iniciarServicios() {
+  const cfg = window.RACIONAL_CONFIG || {};
+  if (!cfg.appCheckSiteKey || cfg.requireAppCheck !== true) {
+    document.getElementById('signin-btn').disabled = true;
+    document.getElementById('auth-message').textContent = 'La sincronización segura aún no está habilitada. Conserva tus respaldos de la versión anterior.';
+    setSt('Configuración de acceso pendiente', 'var(--muted)');
+    return;
+  }
+  try {
+    firebase.initializeApp(firebaseConfig);
+    firebase.appCheck().activate(new firebase.appCheck.ReCaptchaEnterpriseProvider(cfg.appCheckSiteKey), true);
+    const db = firebase.firestore();
+    auth = firebase.auth();
+    await auth.setPersistence(firebase.auth.Auth.Persistence.SESSION);
+    store = new RacionalStorage.AccountStore({
+      db, storage:localStorage, uuid:() => crypto.randomUUID(),
+      timestamp:date => firebase.firestore.Timestamp.fromDate(date),
+      validate:validarMovimiento, projectId:firebaseConfig.projectId,
+      onState:state => {
+        records = state.records;
+        document.getElementById('app-main').hidden = !state.uid;
+        document.getElementById('private-actions').hidden = !state.uid;
+        document.getElementById('auth-panel').hidden = !!state.uid;
+        refresh();
+        setSt(state.message, state.error ? 'var(--red)' : 'var(--muted)');
+      }
+    });
+    auth.onAuthStateChanged(user => {
+      const accepted = store.validUser(user) ? user : null;
+      if ((sesion && sesion.uid) !== (accepted && accepted.uid)) limpiarVistaPrivada();
+      sesion = accepted;
+      document.getElementById('account-label').textContent = accepted ? (accepted.displayName || accepted.email || 'Mi cuenta') : '';
+      document.getElementById('signout-btn').hidden = !user;
+      store.setUser(accepted);
+      if (user && !accepted) document.getElementById('auth-message').textContent = 'Usa una cuenta de Google con correo verificado.';
+    }, () => {
+      limpiarVistaPrivada(); sesion = null; store.setUser(null);
+      document.getElementById('account-label').textContent = '';
+      document.getElementById('signout-btn').hidden = true;
+      document.getElementById('auth-message').textContent = 'No se pudo verificar la sesión. Vuelve a iniciar sesión.';
+    });
+    document.getElementById('signin-btn').disabled = false;
+    document.getElementById('auth-message').textContent = 'Tu sesión se cerrará al cerrar esta pestaña. Los respaldos locales permanecen en este navegador.';
+  } catch(error) {
+    document.getElementById('signin-btn').disabled = true;
+    document.getElementById('auth-message').textContent = 'No se pudo iniciar el acceso seguro. Recarga la página o conserva tus respaldos.';
+  }
+}
+async function iniciarSesion() {
+  if (!auth || closing) return;
+  document.getElementById('signin-btn').disabled = true;
+  try {
+    await auth.setPersistence(firebase.auth.Auth.Persistence.SESSION);
+    const provider = new firebase.auth.GoogleAuthProvider();
+    provider.setCustomParameters({prompt:'select_account'});
+    await auth.signInWithPopup(provider);
+  } catch(error) {
+    document.getElementById('auth-message').textContent = 'No se completó el inicio de sesión. Revisa tu conexión o vuelve a intentarlo.';
+  } finally { document.getElementById('signin-btn').disabled = false; }
+}
+async function cerrarSesion() {
+  if (!auth || closing) return;
+  if (store.dirty) {
+    if (!guardarRespaldo(records)) { alert('Exporta JSON antes de salir: no se pudo guardar el respaldo local.'); return; }
+    if (!confirm('Hay cambios locales pendientes. Se conservarán en el respaldo de esta cuenta. ¿Cerrar sesión?')) return;
+  }
+  closing = true;
+  try { await store.queue; await auth.signOut(); }
+  catch(error) { setSt('No se pudo cerrar la sesión. Inténtalo de nuevo.', 'var(--red)'); }
+  finally { closing = false; }
+}
 function save() {
-  const lista = JSON.parse(JSON.stringify(records));
-  if (!validarLista(lista)) return Promise.resolve(false);
-  const respaldoOK = guardarRespaldo(lista);
-  cambiosLocales = true;
-  const guardar = async () => {
-    if (!nubeLista) {
-      setSt('⚠ Nube no disponible; exporta tus cambios locales', 'var(--red)');
-      return false;
-    }
-    setSt('Guardando...', 'var(--muted)');
-    try {
-      const esperado = baseRemota;
-      await db.runTransaction(async tx => {
-        const snap = await tx.get(docRef);
-        const data = snap.data();
-        const actual = data ? data.records : [];
-        if (!validarLista(actual) || JSON.stringify(actual) !== esperado) throw new Error('conflicto');
-        tx.set(docRef, {records:lista}, {merge:true});
-      });
-      baseRemota = JSON.stringify(lista);
-      cambiosLocales = JSON.stringify(records) !== baseRemota;
-      setSt(respaldoOK ? '✔ Guardado' : '✔ Nube guardada; respaldo local no disponible', 'var(--green)', 3000);
-      return true;
-    } catch(e) {
-      nubeLista = false;
-      setSt('⚠ Conflicto o error de nube; exporta tus cambios antes de recargar', 'var(--red)');
-      return false;
-    }
-  };
-  colaGuardado = colaGuardado.then(guardar, guardar);
+  if (!store || !store.uid || closing) return Promise.resolve(false);
+  colaGuardado = store.save(records);
   return colaGuardado;
 }
 function validarLista(lista) {
   return Array.isArray(lista) && lista.length <= 10000 && lista.every(validarMovimiento);
 }
 function recuperarRespaldo(anterior = false) {
-  try {
-    const lista = JSON.parse(localStorage.getItem(BACKUP_KEY + (anterior ? '_anterior' : '')));
-    if (!validarLista(lista)) throw new Error('invalid');
-    if (!confirm('Recuperar el respaldo en la vista local? No se enviará automáticamente a la nube. Exporta JSON antes de recargar.')) return;
-    records = lista;
-    cambiosLocales = true;
-    refresh();
-    setSt('Respaldo recuperado localmente; exporta JSON para conservarlo', 'var(--muted)');
-  } catch(e) { alert('No hay un respaldo local válido disponible.'); }
+  if (!store || !store.uid) { alert('Inicia sesión para recuperar el respaldo de tu cuenta.'); return; }
+  if (!confirm('Recuperar el respaldo en la vista local? No se enviará automáticamente a la nube. Exporta JSON antes de recargar.')) return;
+  try { store.restore(anterior); }
+  catch(error) { alert('No hay un respaldo válido de esta cuenta disponible.'); }
 }
 
 function exportarJSON() {
-  const blob = new Blob([JSON.stringify({ records }, null, 2)], {type:'application/json'});
+  if (!store || !store.uid) return;
+  const blob = new Blob([JSON.stringify({version:2, ownerUid:store.uid, records}, null, 2)], {type:'application/json'});
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url; a.download = 'libro-portafolio.json'; a.click();
@@ -541,13 +575,17 @@ function exportarJSON() {
 const TIPOS_VALIDOS = new Set(['aporte','compra','venta','rendimiento','dividendo','retiro','comision','rebalanceo']);
 function validarMovimiento(r) {
   if (!r || typeof r !== 'object' || Array.isArray(r)) return false;
-  if (!TIPOS_VALIDOS.has(r.tipo) || typeof r.monto !== 'number' || !Number.isFinite(r.monto)) return false;
+  if (Object.keys(r).some(key => !['id','orden','tipo','monto','desc','fecha','hora','clp','tc','etf','acciones'].includes(key))) return false;
+  if (r.id !== undefined && (typeof r.id !== 'string' || !/^[A-Za-z0-9_-]{8,64}$/.test(r.id))) return false;
+  if (r.orden !== undefined && (!Number.isSafeInteger(r.orden) || r.orden < 0 || r.orden > 1e15)) return false;
+  if (!TIPOS_VALIDOS.has(r.tipo) || typeof r.monto !== 'number' || !Number.isFinite(r.monto) || Math.abs(r.monto) > 1e12) return false;
   if (r.tipo !== 'rendimiento' && r.monto <= 0) return false;
   if (typeof r.desc !== 'string' || !r.desc.trim() || r.desc.length > 500) return false;
   if (typeof r.fecha !== 'string') return false;
   const parts = r.fecha.split('/');
   if (parts.length !== 3 || parts[0].length !== 2 || parts[1].length !== 2 || parts[2].length !== 4 || parts.some(x => [...x].some(ch => ch < '0' || ch > '9'))) return false;
   const [dd,mm,yyyy] = parts.map(Number);
+  if (yyyy < 1900 || yyyy > 2200) return false;
   const fecha = new Date(yyyy,mm-1,dd);
   if (fecha.getFullYear() !== yyyy || fecha.getMonth() !== mm-1 || fecha.getDate() !== dd) return false;
   if (r.hora !== undefined) {
@@ -559,21 +597,28 @@ function validarMovimiento(r) {
   }
   if (r.etf !== undefined && (typeof r.etf !== 'string' || r.etf.length > 30)) return false;
   for (const key of ['clp','tc','acciones']) {
-    if (r[key] !== undefined && (typeof r[key] !== 'number' || !Number.isFinite(r[key]) || r[key] < 0)) return false;
+    if (r[key] !== undefined && (typeof r[key] !== 'number' || !Number.isFinite(r[key]) || r[key] < 0 || r[key] > 1e12)) return false;
   }
   return true;
 }
 function importarJSON(ev) {
+  if (!puedeEditar()) return;
+  const epoch = store.epoch;
   const file = ev.target.files[0]; if (!file) return;
   if (file.size && file.size > 2*1024*1024) { alert('El archivo supera 2 MB.'); return; }
   const reader = new FileReader();
   reader.onload = async e => {
+    if (store.epoch !== epoch) return;
     try {
       const data = JSON.parse(e.target.result);
+      if (data.version !== undefined && (data.version !== 2 || data.ownerUid !== store.uid)) {
+        alert('Este respaldo pertenece a otra cuenta o usa un formato incompatible.'); return;
+      }
       if (!data || !Array.isArray(data.records) || data.records.length > 10000 || !data.records.every(validarMovimiento)) {
         alert('Archivo con movimientos inválidos: no se importó nada.');
         return;
       }
+      store.normalize(data.records);
       if (!confirm('Esto reemplaza tus ' + records.length + ' movimientos actuales por los ' + data.records.length + ' del archivo. ¿Continuar?')) return;
       if (records.length && !guardarRespaldo(records)) {
         alert("Exporta JSON antes de importar: no hay respaldo local disponible."); return;
@@ -714,6 +759,7 @@ function calcUSD() {
 }
 
 function agregar() {
+  if (!puedeEditar()) return;
   const desc  = document.getElementById('f-desc').value.trim();
   const monto = Number(document.getElementById('f-monto').value);
   if (!desc)  { alert('Escribe una nota.'); return; }
@@ -743,7 +789,7 @@ function agregar() {
   document.getElementById('f-etf-otro-wrap').style.display = document.getElementById('f-etf').value==='OTRO' ? '' : 'none';
 }
 
-function eliminar(i) { if (!confirm('¿Eliminar este movimiento?')) return; records.splice(i,1); save(); refresh(); }
+function eliminar(i) { if (!puedeEditar() || !Number.isInteger(i) || !records[i]) return; if (!confirm('¿Eliminar este movimiento?')) return; records.splice(i,1); save(); refresh(); }
 
 function toggleModalFields() {
   const tipo = document.getElementById('m-tipo').value;
@@ -757,7 +803,10 @@ function toggleModalFields() {
   if (!needsEtf) document.getElementById('m-etf-otro-wrap').style.display = 'none';
 }
 
+let editRecordId = null, editOriginal = null;
 function openEdit(i) {
+  if (!puedeEditar() || !records[i]) return;
+  editRecordId = records[i].id; editOriginal = JSON.stringify(records[i]);
   editIdx=i; const r=records[i];
   document.getElementById('m-desc').value  = r.desc||'';
   document.getElementById('m-monto').value = r.monto||0;
@@ -776,7 +825,11 @@ function openEdit(i) {
 }
 function closeModal() { document.getElementById('overlay').classList.remove('on'); editIdx=-1; }
 function saveEdit() {
-  if (editIdx<0) return;
+  if (!puedeEditar() || editIdx < 0) return;
+  editIdx = records.findIndex(record => record.id === editRecordId);
+  if (editIdx < 0 || JSON.stringify(records[editIdx]) !== editOriginal) {
+    alert('Este movimiento cambió en otra sesión. Ábrelo de nuevo antes de editar.'); closeModal(); return;
+  }
   const fv=document.getElementById('m-fecha').value;
   let fd=hoy(); if(fv){const [y,m,d]=fv.split('-');fd=`${d}/${m}/${y}`;}
   const tipo = document.getElementById('m-tipo').value;
@@ -786,6 +839,7 @@ function saveEdit() {
     etf = etfVal === 'OTRO' ? (document.getElementById('m-etf-otro').value.trim() || 'Otro') : etfVal;
   }
   const editado = {
+    ...records[editIdx],
     desc:  document.getElementById('m-desc').value.trim()||records[editIdx].desc,
     monto: parseFloat(document.getElementById('m-monto').value)||0,
     tipo:  tipo,
@@ -1072,9 +1126,10 @@ function renderRendimiento() {
 }
 
 function registrarRendimientoAuto() {
+  if (!puedeEditar()) return;
   const inp = document.getElementById('valor-actual-inp');
   const nuevoValor = parseFloat(inp.value);
-  if (isNaN(nuevoValor) || nuevoValor < 0) { alert('Ingresa el valor actual de tu portafolio en Racional.'); return; }
+  if (!Number.isFinite(nuevoValor) || nuevoValor < 0 || nuevoValor > 1e12) { alert('Ingresa el valor actual de tu portafolio en Racional.'); return; }
   const sum = t => records.filter(r=>r.tipo===t).reduce((s,r)=>s+r.monto,0);
   const aportes = sum('aporte'), rend = sum('rendimiento') + sum('dividendo'), retiros = sum('retiro'), comis = sum('comision');
   const valorActualCalc = Math.max(0, aportes - retiros + rend - comis);
@@ -1083,10 +1138,11 @@ function registrarRendimientoAuto() {
   records.push({tipo:'rendimiento', monto: delta, desc: 'Ajuste automático (valor Racional: '+fmtU(nuevoValor)+')', fecha: hoy(), clp:0, tc:0, etf:''});
   save(); refresh();
   inp.value = '';
-  setSt((delta>=0?'✔ Rendimiento +':'✔ Rendimiento −') + fmtU(delta), delta>=0?'var(--green)':'var(--red)', 3000);
+
 }
 
 function exportarExcel() {
+  if (!store || !store.uid) return;
   if(!records.length){alert('Sin datos para exportar.');return;}
   const XLSX = window.XLSX;
   const wb = XLSX.utils.book_new();
@@ -1109,6 +1165,10 @@ document.addEventListener('keydown',e=>{
 const fechaLocal = new Date();
 document.getElementById('f-fecha').value = [fechaLocal.getFullYear(),String(fechaLocal.getMonth()+1).padStart(2,'0'),String(fechaLocal.getDate()).padStart(2,'0')].join('-');
 toggleClpFields();
+window.addEventListener('beforeunload', event => {
+  if (store && store.dirty) { event.preventDefault(); event.returnValue = ''; }
+});
+iniciarServicios();
 </script>
 </body>
 </html>

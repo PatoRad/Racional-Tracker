@@ -2,3 +2,5 @@ node_modules/
 .pnpm-store/
 *-debug.log
 .firebase/
+.tools/
+.emulators/

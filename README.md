@@ -1,3 +1,5 @@
+> Rama de desarrollo de cuentas seguras, no desplegada. Ver [adopción, pruebas y pendientes](docs/CUENTAS_SEGURAS.md). La configuración pública mantiene la nube bloqueada hasta preparar App Check.
+
 # Racional Tracker — Libro de Portafolio
 
 Aplicación web estática para registrar aportes, compras, ventas, retiros, dividendos, comisiones, rebalanceos y rendimientos de un portafolio de inversiones, principalmente en USD. **No es una conexión automática con Racional ni una fuente de cotizaciones bursátiles en tiempo real.**

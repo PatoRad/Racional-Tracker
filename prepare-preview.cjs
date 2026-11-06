@@ -6,7 +6,7 @@ const crypto = require('node:crypto');
 const root = __dirname;
 const dir = path.join(root, '.tools', 'preview');
 const publicDir = path.join(dir, 'public');
-const files = ['index.html', 'account-store.js', 'app-config.js', 'verificar-acceso.html', 'access-check.js'];
+const files = ['index.html', 'account-store.js', 'app-config.js', 'verificar-acceso.html', 'access-check.js', 'probar-guardado.html', 'storage-probe.js'];
 fs.mkdirSync(publicDir, {recursive: true});
 for (const existing of fs.readdirSync(publicDir)) {
   if (!files.includes(existing) || !fs.lstatSync(path.join(publicDir, existing)).isFile()) {

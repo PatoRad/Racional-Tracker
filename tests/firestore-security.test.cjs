@@ -5,6 +5,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const {initializeTestEnvironment,assertSucceeds,assertFails} = require('@firebase/rules-unit-testing');
 const {Timestamp} = require('firebase/firestore');
+const StorageProbe = require('../storage-probe.js');
 require('firebase/compat/firestore');
 let env;
 before(async()=>{
@@ -16,6 +17,15 @@ after(async()=>{if(env)await env.cleanup();});
 const owner=(uid='user-a',claims={})=>env.authenticatedContext(uid,{email_verified:true,trackerAccess:true,firebase:{sign_in_provider:'google.com'},...claims}).firestore();
 const meta=uid=>'users/'+uid+'/portfolios/main';
 const movement=(overrides={})=>({tipo:'aporte',monto:100,desc:'Sintético',fecha:Timestamp.fromDate(new Date('2026-01-01T00:00:00Z')),hora:'12:00',clp:0,tc:0,etf:'',acciones:0,orden:0,...overrides});
+test('prueba sintética hace CRUD autorizado y deja solo metadatos, sin tocar otros movimientos',async()=>{
+  const uid='probe-owner',db=owner(uid),id='qa_11111111-1111-4111-8111-111111111111';
+  await commit(db,uid,movement(),'existing-record');
+  const result=await StorageProbe.run({db,uid,id,timestamp:date=>Timestamp.fromDate(date)});
+  assert.equal(result.success,true);assert.equal(result.cleaned,true);
+  assert.equal((await db.doc(meta(uid)+'/movements/'+id).get()).exists,false);
+  assert.equal((await db.doc(meta(uid)+'/movements/existing-record').get()).data().desc,'Sintético');
+  assert.equal((await db.doc(meta(uid)).get()).data().revision,4);
+});
 async function commit(db,uid,data,id='record-0001',remove=false) {
   const parent=db.doc(meta(uid)); const snapshot=await parent.get();
   const revision=snapshot.exists?snapshot.data().revision:0;

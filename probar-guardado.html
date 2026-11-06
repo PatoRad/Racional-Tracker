@@ -1,0 +1,36 @@
+<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="referrer" content="strict-origin-when-cross-origin"><title>Prueba de guardado — Racional Tracker</title>
+<style>body{font:18px system-ui;background:#10232b;color:#edf5f7;padding:24px}main{max-width:760px;margin:auto}p{line-height:1.6}button{font:inherit;padding:12px;margin:8px}pre{white-space:pre-wrap;overflow-wrap:anywhere}</style>
+<script src="https://www.gstatic.com/firebasejs/13.2.0/firebase-app-compat.js"></script><script src="https://www.gstatic.com/firebasejs/13.2.0/firebase-auth-compat.js"></script><script src="https://www.gstatic.com/firebasejs/13.2.0/firebase-app-check-compat.js"></script><script src="https://www.gstatic.com/firebasejs/13.2.0/firebase-firestore-compat.js"></script><script src="app-config.js"></script><script src="storage-probe.js"></script></head>
+<body><main><h1>Prueba de guardado</h1><p>Creará un único aporte ficticio marcado como PRUEBA TEMPORAL, lo editará y lo eliminará. Solo lee ese registro y el contador de revisión del portafolio. No consulta otros movimientos. El contador de revisión avanzará; no se borra al terminar.</p><p>No edites ni importes movimientos durante esta prueba. Mantén esta página abierta hasta que confirme la limpieza.</p><button id="login" disabled>Entrar con Google</button><button id="run" disabled>Ejecutar prueba autorizada</button><button id="cleanup" disabled>Reintentar limpieza</button><p id="status" role="status">Preparando…</p><pre id="result"></pre></main>
+<script>
+'use strict';
+const el=id=>document.getElementById(id);let auth,db,check,owner=null,busy=false,authVersion=0;
+const pendingKey=uid=>'racional:synthetic-probe:'+uid;
+const timestamp=date=>firebase.firestore.Timestamp.fromDate(date);
+function buttons(){el('login').disabled=busy||!auth;el('run').disabled=busy||!owner;el('cleanup').disabled=busy||!owner||!sessionStorage.getItem(pendingKey(owner.uid));}
+async function verify(user){const version=++authVersion;owner=null;buttons();let next=null;try{if(user){const r=await user.getIdTokenResult(true);if(user.emailVerified&&r.claims.trackerAccess===true&&r.claims.firebase?.sign_in_provider==='google.com')next=user;}}catch{}if(version!==authVersion)return;owner=next;buttons();if(!busy)el('status').textContent=owner?'Cuenta autorizada. Puedes ejecutar la prueba.':'Inicia sesión con tu cuenta autorizada.';}
+async function main(){
+  const cfg=window.RACIONAL_CONFIG;if(!cfg?.appCheckSiteKey||cfg.requireAppCheck!==true)throw Error('config');
+  firebase.initializeApp({apiKey:'AIzaSyCQpz0nRrB--a3d4obYsDeHGkvq4BXWuo4',authDomain:'contabilidad-4f074.firebaseapp.com',projectId:'contabilidad-4f074',appId:'1:741866902877:web:191716e734a4793b40c4b4'});
+  check=firebase.appCheck();check.activate(new firebase.appCheck.ReCaptchaEnterpriseProvider(cfg.appCheckSiteKey),true);db=firebase.firestore();auth=firebase.auth();await auth.setPersistence(firebase.auth.Auth.Persistence.SESSION);
+  auth.onAuthStateChanged(user=>verify(user),()=>{authVersion++;owner=null;buttons();el('status').textContent='No se pudo verificar el permiso.';});
+  el('login').onclick=async()=>{if(busy)return;busy=true;buttons();try{const p=new firebase.auth.GoogleAuthProvider();p.setCustomParameters({prompt:'select_account'});await auth.signInWithPopup(p);}catch{el('status').textContent='No se completó el acceso con Google.';}finally{busy=false;buttons();if(owner)el('status').textContent='Cuenta autorizada. Puedes ejecutar la prueba.';}};
+  el('run').onclick=async()=>{
+    if(!owner||busy)return;busy=true;buttons();const uid=owner.uid;
+    try{
+      if(sessionStorage.getItem(pendingKey(uid)))throw Error('pending');
+      const attestation=await check.getToken(true);if(!attestation?.token)throw Error('appcheck');
+      const id='qa_'+crypto.randomUUID();sessionStorage.setItem(pendingKey(uid),id);
+      const r=await StorageProbe.run({db,uid,id,timestamp,onStep:text=>{el('status').textContent=text;}});
+      if(r.cleaned||r.errorCode==='probe-collision')sessionStorage.removeItem(pendingKey(uid));
+      el('status').textContent=r.success&&r.cleaned?'Prueba completada: creación, lectura, edición y eliminación verificadas.':r.cleaned?'La prueba falló; limpieza comprobada.':'Prueba detenida. La limpieza no está confirmada; conserva el identificador y reinténtala.';
+      el('result').textContent=JSON.stringify(r,null,2);
+    }catch{el('status').textContent='No se inició o completó la prueba. Comprueba App Check y si hay una limpieza pendiente.';}
+    finally{busy=false;buttons();}
+  };
+  el('cleanup').onclick=async()=>{if(!owner||busy)return;busy=true;buttons();const uid=owner.uid,id=sessionStorage.getItem(pendingKey(uid));try{await StorageProbe.cleanup({db,uid,id,timestamp});sessionStorage.removeItem(pendingKey(uid));el('status').textContent='Limpieza comprobada: el registro ficticio ya no existe.';}catch{el('status').textContent='No se confirmó la limpieza. Conserva este ID: '+id;}finally{busy=false;buttons();}};
+  buttons();
+}
+window.addEventListener('beforeunload',e=>{if(busy){e.preventDefault();e.returnValue='';}});
+main().catch(()=>{el('status').textContent='No se pudo preparar la prueba segura.';});
+</script></body></html>

@@ -195,6 +195,17 @@ test('cliente carga portafolio vacío tras crear, editar y limpiar prueba sinté
   try {assert.equal(store.loaded,true);assert.equal(store.ready,true);assert.equal(store.revision,3);assert.deepEqual(store.records,[]);}
   finally {store.setUser(null);}
 });
+test('cliente real pagina más de 500 movimientos con cursores de documentos',async()=>{
+  const uid='paged-client',db=owner(uid);
+  for(const [start,end,revision] of [[0,400,1],[400,501,2]]){
+    const batch=db.batch();batch.set(db.doc(meta(uid)),{schemaVersion:2,revision});
+    for(let i=start;i<end;i++)batch.set(db.doc(meta(uid)+'/movements/page-'+String(i).padStart(5,'0')),movement({orden:i}));
+    await batch.commit();
+  }
+  const {store}=await realStore(uid);
+  try{assert.equal(store.records.length,501);assert.equal(store.records[500].orden,500);assert.equal(store.revision,2);}
+  finally{store.setUser(null);}
+});
 test('dos clientes reales con base desactualizada no sobrescriben cambios y conservan borrador',async()=>{
   const first=await realStore('same-owner'),second=await realStore('same-owner');
   second.store.unsubscribe();second.store.unsubscribe=null;

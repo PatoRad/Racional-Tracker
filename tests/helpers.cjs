@@ -38,10 +38,12 @@ class FakeDB {
   }
   collection(path) {
     const db=this;
-    return {doc:id=>db.doc(path+'/'+id),limit:n=>({async get() {
+    const query=(n,cursor)=>({startAfter:doc=>query(n,doc),async get() {
       if(db.options.queryDeferred) await db.options.queryDeferred;
-      return {docs:[...db.data.keys()].filter(key=>key.startsWith(path+'/')&&key.slice(path.length+1).indexOf('/')<0).sort().slice(0,n).map(key=>db.snapshot(key))};
-    }})};
+      const after=cursor?.id;
+      return {docs:[...db.data.keys()].filter(key=>key.startsWith(path+'/')&&key.slice(path.length+1).indexOf('/')<0&&(!after||key.slice(path.length+1)>after)).sort().slice(0,n).map(key=>db.snapshot(key))};
+    }});
+    return {doc:id=>db.doc(path+'/'+id),limit:n=>query(n,null)};
   }
   seed(uid,list,revision) {
     const meta='users/'+uid+'/portfolios/main';

@@ -4,7 +4,7 @@
   else root.RacionalStorage = api;
 })(typeof globalThis !== 'undefined' ? globalThis : this, function() {
   'use strict';
-  const MAX_RECORDS = 10000, MAX_WRITES = 400;
+  const MAX_RECORDS = 10000, MAX_WRITES = 400, PAGE_SIZE = 500;
   const FIELDS = ['tipo','monto','desc','fecha','hora','clp','tc','etf','acciones','orden'];
   const ID = /^[A-Za-z0-9_-]{8,64}$/;
   const clone = value => JSON.parse(JSON.stringify(value));
@@ -97,7 +97,21 @@
       try {
         const revision = this.revisionOf(snapshot);
         phase = 'consulta';
-        const query = await movements.limit(MAX_RECORDS + 1).get({source:'server'});
+        // Small queries avoid a single oversized listen target. A final sentinel
+        // read detects overflow; never expose a silently truncated portfolio.
+        const docs = [];
+        let cursor = null;
+        while (docs.length <= MAX_RECORDS) {
+          const pageSize = Math.min(PAGE_SIZE, MAX_RECORDS + 1 - docs.length);
+          let pageQuery = movements.limit(pageSize);
+          if (cursor) pageQuery = pageQuery.startAfter(cursor);
+          const page = await pageQuery.get({source:'server'});
+          if (epoch !== this.epoch || seq !== this.seq || this.dirty) return;
+          docs.push(...page.docs);
+          if (docs.length > MAX_RECORDS) throw Error('invalid-list');
+          if (page.docs.length < pageSize) break;
+          cursor = page.docs[page.docs.length - 1];
+        }
         if (epoch !== this.epoch || seq !== this.seq || this.dirty) return;
         phase = 'revisión';
         const check = await meta.get({source:'server'});
@@ -107,7 +121,7 @@
           return this.load(check, epoch, attempt + 1);
         }
         phase = 'validación';
-        const list = query.docs.map(doc => this.decode(doc));
+        const list = docs.map(doc => this.decode(doc));
         if (list.length > MAX_RECORDS || (!revision && list.length)) throw Error('invalid-data');
         list.sort((a,b) => a.orden - b.orden || a.id.localeCompare(b.id));
         this.records = this.normalize(list); this.base = clone(this.records);

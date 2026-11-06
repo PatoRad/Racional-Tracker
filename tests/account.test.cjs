@@ -208,6 +208,27 @@ test('metadatos inválidos se distinguen de fallo de consulta sin revelar conten
   assert.doesNotMatch(app.element('store-status').textContent,/private-content/);
   assert.equal(app.store.ready,false);
 });
+test('carga todas las páginas y ninguna consulta supera 500 documentos',async()=>{
+  const list=Array.from({length:501},(_,i)=>fixture({id:'paged-'+String(i).padStart(5,'0'),orden:i}));
+  const app=await loadApp([]);const original=app.store.movements,limits=[];
+  app.db.seed('user-a',list);
+  app.store.movements={limit:n=>{limits.push(n);if(n>500)throw Object.assign(Error('server-limit'),{code:'invalid-argument'});return original.limit(n);}};
+  await app.store.load(app.db.snapshot(app.store.meta.path));
+  assert.equal(app.store.ready,true);assert.equal(app.store.records.length,501);assert.deepEqual(limits,[500,500]);
+});
+test('portafolio que supera 10000 se rechaza sin mostrar una lista truncada',async()=>{
+  const app=await loadApp([fixture()]);
+  const list=Array.from({length:10001},(_,i)=>fixture({id:'overflow-'+String(i).padStart(5,'0'),orden:i}));
+  app.db.seed('user-a',list);
+  await app.store.load(app.db.snapshot(app.store.meta.path));
+  assert.equal(app.store.ready,false);assert.equal(app.store.records.length,1);assert.match(app.element('store-status').textContent,/invalid-list/);
+});
+test('un portafolio de exactamente 10000 se carga completo',async()=>{
+  const app=await loadApp([]);
+  app.db.seed('user-a',Array.from({length:10000},(_,i)=>fixture({id:'boundary-'+String(i).padStart(5,'0'),orden:i})));
+  await app.store.load(app.db.snapshot(app.store.meta.path));
+  assert.equal(app.store.ready,true);assert.equal(app.store.records.length,10000);
+});
 test('datos remotos inválidos se rechazan sin reemplazar una copia válida',async()=>{
   const app=await loadApp([fixture()]);
   const path=app.store.movements.doc(app.run('records[0].id')).path;

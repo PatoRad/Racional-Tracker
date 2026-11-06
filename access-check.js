@@ -3,7 +3,7 @@
   const el = id => document.getElementById(id);
   const status = (id, text) => { el(id).textContent = text; };
   const authFailure = error => {
-    // Only render bounded Firebase Auth codes and our own text, never messages/customData.
+    // Only render bounded Firebase codes and our own text, never messages/customData.
     const hints = {
       'auth/unauthorized-domain': 'Falta autorizar el dominio de esta página en Authentication.',
       'auth/popup-blocked': 'El navegador bloqueó la ventana. Permite ventanas emergentes para esta página.',
@@ -14,9 +14,13 @@
       'auth/invalid-api-key': 'La configuración de la clave de API necesita revisión.',
       'auth/api-key-not-valid.-please-pass-a-valid-api-key.': 'La configuración de la clave de API necesita revisión.',
       'auth/invalid-app-credential': 'La credencial de aplicación no fue aceptada. Necesitamos revisar App Check.',
-      'auth/internal-error': 'Firebase devolvió un error interno. Necesitamos revisar la configuración.'
+      'auth/internal-error': 'Firebase devolvió un error interno. Necesitamos revisar la configuración.',
+      'appCheck/initial-throttle': 'App Check rechazó la verificación y suspendió los reintentos. Hay que revisar su configuración antes de volver a probar.',
+      'appCheck/throttled': 'App Check mantiene los reintentos suspendidos por un rechazo anterior. No sigas pulsando el acceso.',
+      'appCheck/fetch-status-error': 'El servidor de App Check rechazó la solicitud. Hay que revisar el registro de la app y la clave Enterprise.',
+      'appCheck/recaptcha-error': 'reCAPTCHA no completó la verificación. Hay que comprobar la clave y los dominios permitidos.'
     };
-    const code = typeof error?.code === 'string' && /^auth\/[a-z][a-z0-9.-]{0,95}$/.test(error.code) ? error.code : null;
+    const code = typeof error?.code === 'string' && /^(?:auth|appCheck)\/[a-z][a-z0-9.-]{0,95}$/.test(error.code) ? error.code : null;
     if (code && !Object.prototype.hasOwnProperty.call(hints, code)) {
       return 'No se completó el acceso (' + code + '). Comparte únicamente este código para revisar la causa.';
     }
@@ -84,7 +88,7 @@
         status('appcheck', result && typeof result.token === 'string' && result.token.length > 0
           ? 'App Check entregó un token. La exigencia en Firestore se verifica por separado.'
           : 'App Check no entregó un token válido.');
-      } catch { status('appcheck', 'App Check falló. Comprueba el dominio de esta página en la clave de sitio.'); }
+      } catch (error) { status('appcheck', 'App Check falló. ' + authFailure(error)); }
       finally { el('check').disabled = false; }
     };
     for (const id of ['login', 'logout', 'check']) el(id).disabled = false;

@@ -5,14 +5,14 @@ const fs=require('node:fs');
 const vm=require('node:vm');
 const source=fs.readFileSync(require('node:path').join(__dirname,'../access-check.js'),'utf8');
 const tick=()=>new Promise(resolve=>setImmediate(resolve));
-async function setup({missing=false,failCheck=false,popupCode}={}) {
+async function setup({missing=false,failCheck=false,popupCode,checkCode}={}) {
   const nodes=Object.fromEntries(['identity','permission','auth-status','appcheck','login','logout','check'].map(id=>[id,{textContent:'',disabled:true}]));
   let listener,initialized=0;
   const auth={setPersistence:async()=>{},onAuthStateChanged:fn=>{listener=fn;fn(null);},signOut:async()=>listener(null),signInWithPopup:async()=>{throw Object.assign(Error('private-error-token'),{code:popupCode,customData:{token:'private-custom-token'}});}};
   const authFactory=()=>auth;
   authFactory.Auth={Persistence:{SESSION:'session'}};
   authFactory.GoogleAuthProvider=class {setCustomParameters(){}};
-  const check=()=>({activate(){},getToken:async()=>{if(failCheck)throw Error('private-error-token');return {token:'secret-app-check-token'};}});
+  const check=()=>({activate(){},getToken:async()=>{if(failCheck)throw Object.assign(Error('private-error-token'),{code:checkCode});return {token:'secret-app-check-token'};}});
   check.ReCaptchaEnterpriseProvider=class {};
   const firebase={initializeApp(){initialized++;},auth:authFactory,appCheck:check};
   Object.defineProperty(firebase,'firestore',{get(){throw Error('Firestore must never be accessed');}});
@@ -27,5 +27,7 @@ test('unmapped Firebase code remains available without SDK messages or credentia
 test('malformed or excessively long error codes are suppressed',async()=>{for(const popupCode of ['auth/secret?token=private-token','auth/'+'a'.repeat(100),'<script>']){const s=await setup({popupCode});await s.nodes.login.onclick();assert.match(s.nodes['auth-status'].textContent,/error no identificado/);assert.doesNotMatch(s.text(),/private-token|<script>|a{100}/);}});
 test('App Check succeeds without rendering its token or accessing Firestore',async()=>{const s=await setup();await s.nodes.check.onclick();assert.match(s.nodes.appcheck.textContent,/entregó un token/);assert.doesNotMatch(s.text(),/secret-app-check-token/);});
 test('App Check errors do not expose raw errors',async()=>{const s=await setup({failCheck:true});await s.nodes.check.onclick();assert.match(s.nodes.appcheck.textContent,/falló/);assert.doesNotMatch(s.text(),/private-error-token/);assert.equal(s.nodes.check.disabled,false);});
+test('App Check rejection propagated through Google popup is diagnosed without credentials',async()=>{const s=await setup({popupCode:'appCheck/initial-throttle'});await s.nodes.login.onclick();assert.match(s.nodes['auth-status'].textContent,/appCheck\/initial-throttle/);assert.match(s.nodes['auth-status'].textContent,/suspendió/);assert.doesNotMatch(s.text(),/private-error-token|private-custom-token/);});
+test('standalone App Check probe reports throttle code instead of misdiagnosing the domain',async()=>{const s=await setup({failCheck:true,checkCode:'appCheck/throttled'});await s.nodes.check.onclick();assert.match(s.nodes.appcheck.textContent,/appCheck\/throttled/);assert.match(s.nodes.appcheck.textContent,/No sigas pulsando/);assert.doesNotMatch(s.text(),/private-error-token/);});
 test('signout invalidates an outstanding identity response',async()=>{const s=await setup();let finish;const response=new Promise(r=>finish=r);const pending=s.listener()({email:'owner@example.test',uid:'owner',emailVerified:true,getIdTokenResult:()=>response});await s.nodes.logout.onclick();finish({token:'private-id-token',claims:{trackerAccess:true,firebase:{sign_in_provider:'google.com'}}});await pending;assert.equal(s.nodes.identity.textContent,'Sin sesión');assert.doesNotMatch(s.text(),/owner|private-id-token/);});
 test('verified owner identity and claim display without ID token; popup failure recovers',async()=>{const s=await setup();await s.listener()({email:'owner@example.test',uid:'owner',emailVerified:true,getIdTokenResult:async()=>({token:'private-id-token',claims:{trackerAccess:true,firebase:{sign_in_provider:'google.com'}}})});assert.match(s.nodes.permission.textContent,/Cuenta autorizada/);assert.doesNotMatch(s.text(),/private-id-token/);await s.nodes.login.onclick();assert.equal(s.nodes.login.disabled,false);assert.doesNotMatch(s.text(),/private-error-token/);});

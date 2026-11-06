@@ -129,9 +129,17 @@ el documento legado: `.tools/adoption/production-before.rules`. La publicación
 aisló la configuración a Firestore (default), sin índices ni otros servicios.
 No se consultaron documentos ni se migraron o escribieron movimientos.
 
-Siguiente fase: comprobar desde la sesión del propietario el portafolio nuevo,
-acordar una prueba con datos sintéticos y coordinar respaldo/importación por el
-propietario. No importar movimientos ni activar enforcement sin autorización.
+El propietario confirmó que abrió el portafolio nuevo. Autorizó y ejecutó la
+prueba sintética; su captura confirmó creación, lectura, edición y eliminación
+verificadas (`success: true`, `cleaned: true`, sin error). Suite ampliada:
+58 tests de cliente y 20 de emulador, también aprobados en CI del commit 485fb1b.
+
+Siguiente fase: coordinar respaldo/importación por el propietario. La selección
+de JSON valida y presenta los conteos antes de confirmar; cancelar ese diálogo
+no reemplaza la vista ni guarda en nube. Revisar antes de aceptar el límite de
+400 cambios y confirmar si el portafolio destino está vacío. No dividir un
+respaldo grande en importaciones que sustituyan el portafolio. No importar
+movimientos ni activar enforcement sin autorización.
 El documento heredado permanece cerrado por la regla de denegación general.
 
 Reversión segura: si falla la adopción, restaurar únicamente la copia previa

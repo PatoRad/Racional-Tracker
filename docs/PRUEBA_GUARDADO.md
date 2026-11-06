@@ -3,8 +3,11 @@
 El propietario autorizó una prueba temporal de creación, lectura, edición y
 eliminación de un movimiento ficticio en su portafolio nuevo. No autoriza
 consultar otros movimientos, importar respaldos ni usar credenciales administrativas
-para eludir reglas. La prueba de producción aún no se ha ejecutado al preparar
-este documento; debe usar la sesión real de Google del propietario.
+para eludir reglas. La prueba de producción fue ejecutada por el propietario
+con su sesión real de Google; la captura del 6 de noviembre de 2026 confirma
+`success: true`, `cleaned: true`, `errorCode: null` y el mensaje de creación,
+lectura, edición y eliminación verificadas. La lectura final desde servidor
+confirmó la ausencia del registro ficticio. No se consultaron otros movimientos.
 
 `probar-guardado.html` y `storage-probe.js` implementan el flujo aislado:
 
@@ -32,3 +35,8 @@ emulador demo aprobados. Se incluyeron colisión, error de edición, rechazo de
 limpieza de contenido distinto y comprobación de que no se leen otros registros.
 La integración usa el mismo módulo con el SDK real y las reglas aprobadas.
 Esto no sustituye la ejecución con la cuenta real del propietario.
+
+La captura posterior del propietario completa esa ejecución real. No acredita
+todavía importación del respaldo ni conciliación de sus totales. Las pruebas
+entre dos clientes y conflictos están cubiertas por el emulador; no se afirma
+haber probado dos dispositivos reales en producción.

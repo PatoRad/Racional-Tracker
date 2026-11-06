@@ -151,10 +151,12 @@ Authentication `Unenforced`, replay `Off`, updateTime anterior sin cambios.
 Se realizó a las 03:30 America/Santiago; puede tardar hasta 15 minutos en
 propagarse (03:45). No se consultaron ni modificaron movimientos en este paso.
 
-Siguiente fase: verificar acceso y CRUD sintético del propietario después de
-propagarse la exigencia, y preparar revisión final del PR antes de main.
-El estado de configuración verificado no demuestra por sí solo el rechazo
-efectivo de peticiones sin token ni la continuidad de acceso del cliente.
+El propietario confirmó acceso con los 220 movimientos y CRUD sintético con
+éxito/limpieza después de propagación, a las 03:49 del 6 de noviembre de 2026.
+No se consultaron sus movimientos desde herramientas del agente. La evidencia
+del cliente positivo no sustituye una prueba negativa independiente con usuario
+válido y token de App Check ausente; la configuración Enforced sí fue verificada.
+Siguiente fase: revisión final y publicación del cliente en main/Pages.
 Mantener el respaldo original y
 exportar una copia versionada desde el cliente nuevo por acción del propietario.
 El documento heredado permanece cerrado por la regla de denegación general.

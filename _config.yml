@@ -1,0 +1,15 @@
+# GitHub Pages uses Jekyll. Publish the application, not local QA/development files.
+exclude:
+  - README.md
+  - docs
+  - tests
+  - package.json
+  - package-lock.json
+  - firebase.json
+  - firestore.rules
+  - prepare-preview.cjs
+  - access-check.js
+  - verificar-acceso.html
+  - storage-probe.js
+  - probar-guardado.html
+  - verificar-limite.html

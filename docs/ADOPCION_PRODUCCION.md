@@ -107,7 +107,7 @@ al código ya comprobado; no se repiten suites por una edición documental.
   Diff verificado: solo ese archivo de configuración y comentarios.
 - El enforcement de Firestore no se ha vuelto a verificar; el último estado
   observado era No se aplica. No se ha instruido activarlo todavía.
-- Cuenta personal con trackerAccess: pendiente de habilitación administrativa.
+- Cuenta personal con trackerAccess: concedido el 6 de noviembre de 2026 con autorización expresa; identidad Google, correo verificado y coincidencia con el administrador del CLI comprobados. Lectura administrativa posterior confirmó el permiso; falta comprobar renovación del token en el navegador del propietario.
 - Cliente nuevo: no publicado; main sin cambios por este trabajo.
 
 Verificaciones del cambio de clave:

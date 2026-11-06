@@ -68,3 +68,22 @@ No se considera completa la adopción hasta verificar Google con el propietario,
 su permiso privado y las condiciones restantes de producción. Main, reglas,
 enforcement y movimientos no se modificaron en este paso.
 
+## Cuenta del propietario
+
+El propietario confirmó acceso con Google, proporcionó su UID y mostró que
+App Check emitió un token en su navegador. Autorizó explícitamente conceder
+`trackerAccess: true` exclusivamente a esa cuenta.
+
+El 6 de noviembre de 2026 a las 02:25 (America/Santiago), mediante las funciones
+del CLI oficial `findUser` y `setCustomClaim` con `merge: true`, se comprobó:
+UID exacto, proveedor Google, correo verificado, cuenta habilitada y correo
+coincidente con el de la sesión administrativa del CLI. No había otras claims.
+La lectura posterior confirmó `trackerAccess: true`. Solo se consultó esa cuenta;
+no se exportaron usuarios ni se consultó Firestore. No se publican UID ni correo
+del propietario en esta evidencia del repositorio público.
+
+Tres pruebas del procedimiento comprobaron preservación de claims, rechazo
+de identidad/proveedor/estado incorrectos y rechazo de claims inválidas o
+demasiado grandes. El token de la sesión del propietario necesita renovarse
+antes de verificar el permiso desde el cliente. Las reglas siguen bloqueadas;
+todavía no se adopta el esquema nuevo ni se considera completa la aplicación.

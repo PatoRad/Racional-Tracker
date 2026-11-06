@@ -1,4 +1,10 @@
-# Cuentas seguras: prototipo de adopción, NO desplegado
+# Cuentas seguras: implementación y adopción controlada
+
+Estado actual: acceso del propietario, reglas privadas, App Check exigido y
+persistencia del respaldo comprobados. El diseño y las pruebas iniciales que
+siguen se conservan como historial. Para el estado de publicación y pendientes,
+consultar [CIERRE_PRE_MAIN.md](CIERRE_PRE_MAIN.md) y
+[ADOPCION_PRODUCCION.md](ADOPCION_PRODUCCION.md).
 
 Decisión del propietario: primero uso personal con Google; después varias cuentas
 con portafolios separados. Rama audit/cuentas-seguras, basada en 736537d, sin merge,

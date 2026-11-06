@@ -1,4 +1,4 @@
-> Rama de desarrollo de cuentas seguras, no desplegada. Ver [adopción, pruebas y pendientes](docs/CUENTAS_SEGURAS.md). La configuración pública mantiene la nube bloqueada hasta preparar App Check.
+> Cliente con acceso privado por cuenta. Estado de adopción, verificaciones y límites: [revisión previa a publicación](docs/CIERRE_PRE_MAIN.md).
 
 # Racional Tracker — Libro de Portafolio
 
@@ -6,7 +6,9 @@ Aplicación web estática para registrar aportes, compras, ventas, retiros, divi
 
 ## Estado del proyecto
 
-La rama `main` conserva la versión publicada/original. En `audit/seguridad-y-calculos` se están corrigiendo errores y creando pruebas con datos sintéticos. **Esta rama no se debe desplegar ni fusionar a producción sin revisión de seguridad de Firebase y pruebas completas.**
+El cliente requiere una cuenta de Google con correo verificado y permiso administrativo `trackerAccess`. Cada cuenta autorizada accede únicamente a su portafolio. Firestore exige App Check además de las reglas privadas. La adopción inicial es para el propietario; habilitar nuevas cuentas requiere autorización administrativa.
+
+La sesión real, las reglas, App Check, el guardado y la recuperación del respaldo fueron comprobados durante la adopción controlada. Las evidencias y pendientes están en [docs/ADOPCION_PRODUCCION.md](docs/ADOPCION_PRODUCCION.md). La publicación del frontend se revisa mediante PR y CI.
 
 ## Funcionalidades
 
@@ -20,7 +22,11 @@ La rama `main` conserva la versión publicada/original. En `audit/seguridad-y-ca
 
 ## Arquitectura
 
-`index.html` contiene HTML, estilos y JavaScript cliente. Usa Chart.js para gráficos, SheetJS/XLSX para exportar archivos y Firebase Firestore (SDK compat) para sincronizar el arreglo completo de movimientos en un documento fijo. La aplicación mantiene una copia en `localStorage` pero **no dispone todavía de una recuperación de respaldo completa y verificada**.
+`index.html` contiene la interfaz y los cálculos. `account-store.js` gestiona portafolios bajo `users/{uid}/portfolios/main` y movimientos individuales. Las escrituras son transacciones con revisión y comprobación de conflictos; la carga pagina de 500 en 500 y rechaza datos incompletos o que exceden el máximo. `app-config.js` contiene la configuración pública de App Check.
+
+Los respaldos locales son versionados por proyecto y UID, con una generación anterior. La importación de otro propietario se rechaza; los respaldos antiguos requieren confirmación y validación. Se admiten hasta 400 cambios atómicos por operación, 10000 registros y archivos JSON de 2 MB. Las importaciones mayores necesitan un procedimiento de migración separado; no dividir un reemplazo en importaciones sucesivas.
+
+Chart.js se usa para gráficos y SheetJS/XLSX para exportar Excel. Las páginas de diagnóstico se conservan para revisión, pero `_config.yml` las excluye del sitio GitHub Pages. La vista temporal de pruebas usa una lista de publicación independiente.
 
 **Importante:** este repositorio utiliza **Firebase Firestore, no Supabase**. La configuración pública de Firebase forma parte del código cliente; las reglas Firestore, el control de acceso y cualquier autenticación de producción deben auditarse por separado. Las claves de configuración web no sustituyen a las reglas de autorización.
 
@@ -28,18 +34,20 @@ La rama `main` conserva la versión publicada/original. En `audit/seguridad-y-ca
 
 1. Obtén una copia del repositorio.
 2. Abre el sitio en un servidor estático local (por ejemplo, `python3 -m http.server 8000`) y visita `http://localhost:8000`.
-3. **No introduzcas datos reales durante el desarrollo.** Abrir `index.html` ejecuta su cliente Firebase configurado: el archivo no ofrece por sí solo un modo de demostración aislado.
+3. **No introduzcas datos reales durante el desarrollo.** El cliente apunta al proyecto configurado; servirlo localmente no lo convierte en una demostración aislada. Google y App Check requieren dominios autorizados. Abrirlo como archivo `C:/...` no sirve para probar el acceso web.
 4. Para desarrollar con persistencia, usa exclusivamente un proyecto Firebase de prueba o el emulador, con credenciales y reglas adecuadas.
 
 ## Ejecutar las pruebas
 
-Necesitas Node.js 20 o superior, sin instalar dependencias:
+Necesitas Node.js >=24.12, npm y Java 21 para el emulador:
 
 ```bash
-node --test tests/regression.test.cjs
+npm ci --ignore-scripts
+npm test
+npm run test:security
 ```
 
-La suite simula Firebase, el almacenamiento y el navegador; no debe contactar los servicios reales. Consulta [tests/README.md](tests/README.md).
+La suite de cliente simula Firebase, el almacenamiento y el navegador. La suite de seguridad utiliza el SDK real exclusivamente contra el emulador local con proyecto demo y aborta si no está en loopback:8088. CI también construye el sitio con Jekyll y verifica los archivos publicados y las exclusiones. Consulta [tests/README.md](tests/README.md).
 
 ## Correcciones en la rama de auditoría
 
@@ -54,13 +62,13 @@ La suite simula Firebase, el almacenamiento y el navegador; no debe contactar lo
 
 ## Limitaciones y riesgos pendientes
 
-- No se han comprobado las reglas de seguridad ni los permisos reales de Firebase. El documento único compartido y la escritura de `records` completo pueden ocasionar conflictos entre sesiones.
+- El documento legado compartido permanece bloqueado; no se migra ni se consulta automáticamente. La autorización se basa en Firebase Auth y claims administrativos, no en roles que el usuario pueda escribir en documentos.
 - Las posiciones se aproximan por costo histórico; los activos «Otro» no están incluidos en la distribución objetivo.
-- La recuperación automática de `localStorage`, un historial inmutable de operaciones y el control de concurrencia siguen pendientes.
+- Los respaldos en `localStorage` no están cifrados y no sustituyen una copia externa. Exporta JSON y consérvalo en un lugar confiable. No hay historial inmutable ni se ha configurado respaldo administrado/PITR o protección de eliminación de la base.
 - El XIRR utiliza la última fecha registrada como valoración terminal; hay que contrastarlo con datos representativos.
 - Dependencias de CDN, especialmente XLSX 0.18.5, requieren revisión y actualización.
-- No se han ejecutado pruebas de navegador end-to-end ni una auditoría de despliegue.
-- No se incorporaron pruebas de integración contra Firebase real: deben diseñarse con el emulador.
+- Se comprobó un flujo real del propietario, pero no se declara auditoría exhaustiva de todos los dispositivos, cálculos o escenarios de producción. Los conflictos entre dos clientes se prueban en el emulador.
+- No compartas respaldos, tokens ni credenciales privadas en el repositorio o en reportes. Las claves públicas de configuración no sustituyen las reglas de seguridad.
 
 ## Reglas de seguridad del proyecto
 
@@ -71,4 +79,4 @@ No ejecutar pruebas destructivas contra datos reales, no publicar credenciales p
 
 ## Auditoría Firebase / Firestore (Etapa 3)
 
-La rama `audit/firebase-firestore-seguridad` añade **reglas propuestas y pruebas de emulador**, sin cambiar ni desplegar las reglas reales de Firebase. **No aplicar `firestore.rules` a producción** hasta implementar Firebase Authentication y una ruta por usuario: la aplicación actual seguiría solicitando el documento heredado `libro`, al cual la propuesta deniega acceso. Los límites de esta auditoría y pasos de migración están en [docs/FIREBASE_SECURITY_AUDIT.md](docs/FIREBASE_SECURITY_AUDIT.md).
+El historial de las ramas de auditoría está en [docs/FIREBASE_SECURITY_AUDIT.md](docs/FIREBASE_SECURITY_AUDIT.md). Las reglas privadas, el permiso del propietario y la exigencia de App Check se adoptaron posteriormente con autorizaciones expresas; véase [docs/ADOPCION_PRODUCCION.md](docs/ADOPCION_PRODUCCION.md). No publicar cambios de reglas ni configuraciones de producción sin revisión y autorización.

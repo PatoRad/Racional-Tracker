@@ -11,8 +11,10 @@ persistencia confirmada tras recargar. No se inspeccionaron valores financieros.
 CI del candidato da9f2e1: 72 pruebas de cliente y 22 de emulador aprobadas.
 Enforcement de App Check de Firestore autorizado y activado a las 03:30 de Chile
 del 6 de noviembre: lectura posterior `Enforced`, con Auth y replay sin cambios.
-Pendientes: verificación posterior de acceso una vez propagado (hasta 03:45),
-respaldo versionado del propietario y revisión final del PR/main.
+El propietario confirmó ambas verificaciones después de propagación, a las
+03:49 de Chile: acceso sincronizado y prueba de guardado con éxito/limpieza.
+Pendientes: copia versionada externa recomendada y publicación final del cliente
+en main/Pages. La construcción CI de Pages excluye las páginas de diagnóstico.
 Los apartados siguientes conservan la evidencia de preparación.
 
 ## Evidencia del 6 de noviembre de 2026

@@ -191,6 +191,23 @@ test('error de nube no se presenta como sincronización exitosa',async()=>{
   assert.equal(app.store.ready,false);
   assert.match(app.element('store-status').textContent,/No se pudo/);
 });
+test('fallo de carga identifica etapa y código sin exponer errores privados',async()=>{
+  const app=await loadApp([fixture()]);
+  app.store.movements={limit:()=>({get:async()=>{throw Object.assign(Error('private-token-and-record'),{code:'permission-denied'});}})};
+  await app.store.load(app.db.snapshot(app.store.meta.path));
+  assert.equal(app.store.ready,false);
+  assert.match(app.element('store-status').textContent,/consulta: permission-denied/);
+  assert.doesNotMatch(app.element('store-status').textContent,/private-token-and-record/);
+  assert.equal(app.run('records.length'),1);
+});
+test('metadatos inválidos se distinguen de fallo de consulta sin revelar contenido',async()=>{
+  const app=await loadApp([]);
+  app.db.data.set(app.store.meta.path,{schemaVersion:2,revision:'private-content'});
+  await app.store.load(app.db.snapshot(app.store.meta.path));
+  assert.match(app.element('store-status').textContent,/metadatos: invalid-revision/);
+  assert.doesNotMatch(app.element('store-status').textContent,/private-content/);
+  assert.equal(app.store.ready,false);
+});
 test('datos remotos inválidos se rechazan sin reemplazar una copia válida',async()=>{
   const app=await loadApp([fixture()]);
   const path=app.store.movements.doc(app.run('records[0].id')).path;

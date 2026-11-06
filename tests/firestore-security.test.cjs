@@ -187,6 +187,14 @@ test('cliente real usa transacciones compatibles con las reglas para crear, edit
     assert.equal((await owner('client-owner').doc(meta('client-owner')).get()).data().revision,3);
   } finally {store.setUser(null);}
 });
+test('cliente carga portafolio vacío tras crear, editar y limpiar prueba sintética',async()=>{
+  const uid='after-probe',db=owner(uid),id='qa_22222222-2222-4222-8222-222222222222';
+  const probe=await StorageProbe.run({db,uid,id,timestamp:date=>Timestamp.fromDate(date)});
+  assert.equal(probe.success,true);assert.equal(probe.cleaned,true);
+  const {store}=await realStore(uid);
+  try {assert.equal(store.loaded,true);assert.equal(store.ready,true);assert.equal(store.revision,3);assert.deepEqual(store.records,[]);}
+  finally {store.setUser(null);}
+});
 test('dos clientes reales con base desactualizada no sobrescriben cambios y conservan borrador',async()=>{
   const first=await realStore('same-owner'),second=await realStore('same-owner');
   second.store.unsubscribe();second.store.unsubscribe=null;

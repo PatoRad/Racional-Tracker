@@ -93,26 +93,34 @@
       if (epoch !== this.epoch || snapshot.metadata?.hasPendingWrites || snapshot.metadata?.fromCache || this.dirty) return;
       const seq = ++this.seq;
       const meta = this.meta, movements = this.movements;
+      let phase = 'metadatos';
       try {
         const revision = this.revisionOf(snapshot);
+        phase = 'consulta';
         const query = await movements.limit(MAX_RECORDS + 1).get({source:'server'});
         if (epoch !== this.epoch || seq !== this.seq || this.dirty) return;
+        phase = 'revisión';
         const check = await meta.get({source:'server'});
         if (epoch !== this.epoch || seq !== this.seq || this.dirty) return;
         if (this.revisionOf(check) !== revision) {
           if (attempt >= 2) throw Error('busy');
           return this.load(check, epoch, attempt + 1);
         }
+        phase = 'validación';
         const list = query.docs.map(doc => this.decode(doc));
         if (list.length > MAX_RECORDS || (!revision && list.length)) throw Error('invalid-data');
         list.sort((a,b) => a.orden - b.orden || a.id.localeCompare(b.id));
         this.records = this.normalize(list); this.base = clone(this.records);
         this.revision = revision; this.ready = true; this.loaded = true;
+        phase = 'pantalla';
         this.emit('✔ Sincronizado');
       } catch(error) {
         if (epoch !== this.epoch || seq !== this.seq) return;
         this.ready = false;
-        this.emit('No se pudo verificar la nube. Conserva y exporta tu copia local.', true);
+        const known = ['permission-denied','unauthenticated','unavailable','deadline-exceeded','resource-exhausted','failed-precondition','invalid-argument','appCheck/initial-throttle','appCheck/throttled'];
+        const internal = ['invalid-revision','invalid-data','invalid-date','invalid-list','invalid-movement','invalid-id','busy'];
+        const code = known.includes(error?.code) ? error.code : internal.includes(error?.message) ? error.message : ['TypeError','ReferenceError'].includes(error?.name) ? error.name : 'sin-código';
+        this.emit('No se pudo verificar la nube (' + phase + ': ' + code + '). Conserva y exporta tu copia local.', true);
       }
     }
     backup(list) {

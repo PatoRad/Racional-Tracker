@@ -92,3 +92,12 @@ controles; instalar el plugin no demuestra una sesión autenticada.
 El workflow de esta rama instala versiones directas exactas con Node 24 y Java 21,
 y ejecuta tanto regresión como emulador demo. Las dependencias transitivas aún no
 tienen lockfile; queda pendiente fijarlas para reproducibilidad completa.
+
+## Verificación de esta rama
+
+Commit de código probado: ff3a0e4692311c2baf2af73a89a203d5a7d49ced.
+GitHub Actions: https://github.com/PatoRad/Racional-Tracker/actions/runs/42143390843
+Job 127648929498 finalizado success: 19/19 regresiones y 14/14 pruebas de reglas
+con emulador, 0 fallos y 0 omitidas en ambas suites. Los logs confirman salida 0.
+Este resultado corresponde a reglas propuestas y datos sintéticos, no a producción.
+Main se comprobó sin cambios en d22b3790188907481bfd7f5df8885689ee904e6f.

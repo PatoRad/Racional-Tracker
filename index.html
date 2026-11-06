@@ -460,7 +460,7 @@ const firebaseConfig = {
   messagingSenderId: "741866902877",
   appId: "1:741866902877:web:191716e734a4793b40c4b4"
 };
-let store = null, auth = null, sesion = null, closing = false;
+let store = null, auth = null, sesion = null, closing = false, authEpoch = 0;
 let colaGuardado = Promise.resolve();
 function guardarRespaldo(lista) { return store ? store.backup(lista) : false; }
 function puedeEditar() {
@@ -505,15 +505,31 @@ async function iniciarServicios() {
         setSt(state.message, state.error ? 'var(--red)' : 'var(--muted)');
       }
     });
-    auth.onAuthStateChanged(user => {
-      const accepted = store.validUser(user) ? user : null;
-      if ((sesion && sesion.uid) !== (accepted && accepted.uid)) limpiarVistaPrivada();
+    auth.onAuthStateChanged(async user => {
+      const generation = ++authEpoch;
+      if ((sesion && sesion.uid) !== (user && user.uid)) {
+        limpiarVistaPrivada(); sesion = null; store.setUser(null);
+        document.getElementById('account-label').textContent = '';
+      }
+      document.getElementById('signout-btn').hidden = !user;
+      let accepted = null;
+      try {
+        if (user) {
+          const token = await user.getIdTokenResult(true);
+          const candidate = {uid:user.uid, email:user.email, displayName:user.displayName,
+            emailVerified:user.emailVerified, providerData:user.providerData,
+            trackerAccess:token.claims.trackerAccess === true};
+          if (store.validUser(candidate)) accepted = candidate;
+        }
+      } catch(error) { /* Se mantiene el acceso cerrado si no se verifica el permiso. */ }
+      if (generation !== authEpoch) return;
+      if (!accepted && sesion) limpiarVistaPrivada();
       sesion = accepted;
       document.getElementById('account-label').textContent = accepted ? (accepted.displayName || accepted.email || 'Mi cuenta') : '';
-      document.getElementById('signout-btn').hidden = !user;
       store.setUser(accepted);
-      if (user && !accepted) document.getElementById('auth-message').textContent = 'Usa una cuenta de Google con correo verificado.';
+      if (user && !accepted) document.getElementById('auth-message').textContent = 'Esta cuenta todavía no está habilitada. Usa una cuenta de Google verificada y autorizada.';
     }, () => {
+      authEpoch++;
       limpiarVistaPrivada(); sesion = null; store.setUser(null);
       document.getElementById('account-label').textContent = '';
       document.getElementById('signout-btn').hidden = true;

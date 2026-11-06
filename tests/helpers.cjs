@@ -12,7 +12,7 @@ function copy(value) {
   if (value && typeof value === 'object') return Object.fromEntries(Object.entries(value).map(([k,v])=>[k,copy(v)]));
   return value;
 }
-const user = uid => ({uid,emailVerified:true,email:uid+'@example.test',displayName:uid,providerData:[{providerId:'google.com'}]});
+const user = uid => ({uid,emailVerified:true,trackerAccess:true,async getIdTokenResult(){return {claims:{trackerAccess:true}};},email:uid+'@example.test',displayName:uid,providerData:[{providerId:'google.com'}]});
 function fixture(overrides={}) {
   return {tipo:'aporte',monto:100,desc:'Depósito sintético',fecha:'01/01/2026',hora:'12:00',clp:0,tc:0,etf:'',acciones:0,...overrides};
 }

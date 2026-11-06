@@ -13,7 +13,7 @@ before(async()=>{
 });
 beforeEach(async()=>env.clearFirestore());
 after(async()=>{if(env)await env.cleanup();});
-const owner=(uid='user-a',claims={})=>env.authenticatedContext(uid,{email_verified:true,firebase:{sign_in_provider:'google.com'},...claims}).firestore();
+const owner=(uid='user-a',claims={})=>env.authenticatedContext(uid,{email_verified:true,trackerAccess:true,firebase:{sign_in_provider:'google.com'},...claims}).firestore();
 const meta=uid=>'users/'+uid+'/portfolios/main';
 const movement=(overrides={})=>({tipo:'aporte',monto:100,desc:'Sintético',fecha:Timestamp.fromDate(new Date('2026-01-01T00:00:00Z')),hora:'12:00',clp:0,tc:0,etf:'',acciones:0,orden:0,...overrides});
 async function commit(db,uid,data,id='record-0001',remove=false) {
@@ -49,7 +49,7 @@ test('otra cuenta no puede obtener, consultar, crear, actualizar ni borrar datos
   await assertFails(db.doc(meta('user-a')).update({revision:2}));
 });
 test('cuentas no verificadas y proveedores distintos de Google quedan denegados',async()=>{
-  for(const db of [owner('user-a',{email_verified:false}),owner('user-a',{firebase:{sign_in_provider:'anonymous'}}),owner('user-a',{firebase:{sign_in_provider:'password'}}),env.authenticatedContext('user-a').firestore()]) {
+  for(const db of [owner('user-a',{email_verified:false}),owner('user-a',{trackerAccess:false}),owner('user-a',{trackerAccess:'true'}),owner('user-a',{firebase:{sign_in_provider:'anonymous'}}),owner('user-a',{firebase:{sign_in_provider:'password'}}),env.authenticatedContext('user-a').firestore()]) {
     await assertFails(db.doc(meta('user-a')).get());
     await assertFails(db.doc(meta('user-a')).set({schemaVersion:2,revision:1}));
   }
@@ -99,7 +99,7 @@ test('create y update rechazan montos, tipos, textos y unidades inválidos',asyn
     {tipo:'admin'},{desc:''},{desc:'x'.repeat(501)},{desc:{}},{fecha:'31/02/2026'},
     {fecha:Timestamp.fromDate(new Date('1800-01-01T00:00:00Z'))},
     {fecha:Timestamp.fromDate(new Date('2201-01-01T00:00:00Z'))},
-    {hora:'24:00'},{hora:'12:60'},{hora:'<img>'},{etf:'X'.repeat(31)},
+    {fecha:Timestamp.fromDate(new Date('2026-01-01T12:00:00Z'))},{hora:'24:00'},{hora:'12:60'},{hora:'<img>'},{etf:'X'.repeat(31)},
     {clp:-1},{tc:Infinity},{acciones:-0.1},{orden:1.5},{orden:-1}
   ];
   for(const value of values) {
@@ -189,4 +189,10 @@ test('dos clientes reales con base desactualizada no sobrescriben cambios y cons
     assert.equal(result.size,1);assert.equal(result.docs[0].data().monto,111);
     assert.equal(JSON.parse(second.storage.get(second.store.key)).records[0].monto,222);
   } finally {first.store.setUser(null);second.store.setUser(null);}
+});
+test('Google verificado sin custom claim no tiene acceso aunque el UID coincida',async()=>{
+  const db=env.authenticatedContext('user-a',{email_verified:true,firebase:{sign_in_provider:'google.com'}}).firestore();
+  await assertFails(db.doc(meta('user-a')).get());
+  await assertFails(db.doc(meta('user-a')).set({schemaVersion:2,revision:1}));
+  await assertFails(db.collection(meta('user-a')+'/movements').get());
 });

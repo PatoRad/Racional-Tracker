@@ -6,7 +6,7 @@ sin tocar main y sin leer o modificar información financiera real.
 
 ## Cambios y compatibilidad
 
-- Google con correo verificado y persistencia limitada a la pestaña/sesión.
+- Google con correo verificado, custom claim administrativo trackerAccess=true y persistencia limitada a la pestaña/sesión. El cliente verifica el token antes de abrir un listener; las reglas comprueban la autorización emitida por Firebase.
 - Un portafolio main bajo users/{uid}/portfolios/main. Este documento solo tiene
   schemaVersion=2 y revision. Los movimientos son documentos independientes en
   /movements/{id}, con esquema estricto; fecha se guarda como Timestamp a medianoche UTC.
@@ -61,8 +61,7 @@ proyecto contabilidad-4f074 y recoger únicamente configuración:
 3. App Check: registro de la aplicación web, proveedor, site key pública y
    enforcement real para Firestore (y Authentication si se usa ese producto).
 
-Las herramientas del plugin instalado no expusieron esas lecturas en esta sesión.
-Instalar el plugin no equivale a iniciar sesión o a tener permisos.
+El servidor MCP instalado ya pudo iniciarse y se consultó firebase_get_environment en modo de solo lectura. El resultado fue Authenticated User: <NONE>, con el proyecto objetivo contabilidad-4f074 establecido localmente. No se obtuvo configuración de producción. Instalar el plugin no equivale a iniciar sesión o a tener permisos.
 Nunca solicitar contraseñas, tokens, service-account JSON o backups financieros
 para esta auditoría. No probar exposición leyendo un documento real.
 
@@ -72,20 +71,20 @@ para esta auditoría. No probar exposición leyendo un documento real.
 2. Revisar las reglas prototipo y aprobar un plan de adopción y reversión.
 3. Habilitar Google/dominio y registrar App Check en un entorno de ensayo;
    configurar la site key pública; comprobar métricas y enforcement.
-4. Probar OAuth y reCAPTCHA en navegador real; los dobles de prueba no validan
+4. Autorizar inicialmente solo el UID del propietario con trackerAccess=true mediante un procedimiento administrativo aprobado por separado. No se asignó ningún claim real durante este trabajo. Posteriormente podrán autorizarse otros UID.
+5. Probar OAuth y reCAPTCHA en navegador real; los dobles de prueba no validan
    esos servicios ni los permisos reales.
-5. El propietario exporta su copia en la versión antigua y verifica su backup
+6. El propietario exporta su copia en la versión antigua y verifica su backup
    fuera de la app. El agente no necesita ver esos movimientos.
-6. Verificar identidad destino, ensayar migración con datos sintéticos, aprobar
+7. Verificar identidad destino, ensayar migración con datos sintéticos, aprobar
    por separado adopción coordinada de cliente y reglas.
-7. Restaurar JSON en la cuenta correcta, comparar recuentos y totales, y probar
+8. Restaurar JSON en la cuenta correcta, comparar recuentos y totales, y probar
    recuperación y reversión antes de abrir el acceso a otras personas.
 
 ## Límites que siguen abiertos
 
 - App Check del cliente no garantiza enforcement: se comprueba en consola.
-- Google por sí solo no restringe altas a una única persona. Para una beta cerrada
-  se necesita política adicional de admisión; no se ha configurado producción.
+- Google puede crear una cuenta de Authentication al iniciar sesión. La autorización trackerAccess bloquea los datos para cuentas no admitidas, pero no sustituye cuotas ni protección de altas de Authentication. No se ha configurado producción.
 - No se implementa una cuota agregada segura por UID. Hay límites por documento y
   por operación; antes de publicar hacen falta cuotas, presupuesto y monitorización.
 - Respaldos en localStorage sin cifrado; quien acceda al mismo perfil del navegador
@@ -116,3 +115,24 @@ tardías de sesiones anteriores; esos cambios requieren la ejecución siguiente.
 Prueba de navegador local: pantalla de acceso bloqueada correctamente al faltar
 la site key, portafolio oculto, sin errores ni advertencias de consola.
 No se inició Firebase ni se leyó el documento heredado en esa comprobación.
+## Acceso que falta para cerrar producción
+
+El servidor Firebase MCP 15.35.0 pudo iniciarse. Se invocó solamente la herramienta
+firebase_get_environment, declarada de lectura. Resultado: Authenticated User:
+<NONE>. El proyecto objetivo se fijó únicamente en una carpeta local de auditoría
+ignorada por Git. El valor de billing devuelto sin sesión no acredita el estado
+real de facturación y no se usa como hallazgo.
+
+El propietario debe iniciar sesión en Firebase CLI con su cuenta habitual.
+En una terminal con Node/npm disponibles:
+  npx --yes firebase-tools@15.35.0 login --no-localhost
+
+El usuario completa personalmente el acceso de Google. No debe pegar tokens,
+códigos de autorización ni claves privadas en el chat. Después se puede consultar
+el ruleset activo con firebase_get_security_rules, sin consultar documentos.
+Para proveedores/dominios de Authentication y registro/enforcement de App Check,
+usar acceso de lectura a configuración en consola/API: esas herramientas de
+lectura no están expuestas por este servidor MCP.
+
+No se aceptaron términos de Gemini, no se cambió IAM y no se creó ninguna cuenta
+de Authentication ni se asignó trackerAccess en producción durante este trabajo.

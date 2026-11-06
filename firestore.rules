@@ -3,6 +3,7 @@
 // movements/{id}: tipo enum, monto number +/-1e12 (positivo salvo rendimiento),
 // desc string 1..500, fecha timestamp 1900..2200, hora HH:mm o vacía,
 // clp/tc/acciones number 0..1e12, etf string <=30, orden int 0..1e15.
+// trackerAccess es un custom claim emitido solo por administración; no por documentos.
 // No se almacenan roles ni UID proporcionados por el cliente.
 // Toda escritura de movimientos requiere avanzar la revisión en la misma operación.
 rules_version = '2';
@@ -11,6 +12,7 @@ service cloud.firestore {
     function isAuthenticated() {
       return request.auth != null &&
         request.auth.token.email_verified == true &&
+        request.auth.token.trackerAccess == true &&
         request.auth.token.firebase.sign_in_provider == 'google.com';
     }
     function isOwner(uid) { return isAuthenticated() && request.auth.uid == uid; }

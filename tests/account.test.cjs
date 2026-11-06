@@ -225,3 +225,18 @@ test('ajuste automático válido se guarda con el mismo esquema que los demás m
   assert.equal(app.run('records.at(-1).tipo'),'rendimiento');
   assert.equal(app.run('records.at(-1).monto'),10);
 });
+test('Google verificado sin permiso administrativo no obtiene listener ni puede guardar',async()=>{
+  const denied={...user('user-a'),async getIdTokenResult(){return {claims:{}};}};
+  const app=await loadApp([],{user:denied});
+  assert.equal(app.store.uid,null);assert.equal(app.db.listeners.size,0);
+  assert.equal(await app.run('save()'),false);
+});
+test('token tardío de una sesión cancelada no vuelve a abrir el portafolio',async()=>{
+  let resolve;const pending=new Promise(r=>{resolve=r;});
+  const account={...user('user-a'),getIdTokenResult(){return pending;}};
+  const app=await loadApp([fixture()],{user:account});
+  assert.equal(app.store.uid,null);
+  await app.changeUser(null);
+  resolve({claims:{trackerAccess:true}});await settle();
+  assert.equal(app.store.uid,null);assert.equal(app.run('records.length'),0);
+});

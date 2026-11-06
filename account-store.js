@@ -21,7 +21,7 @@
       if (this.uid && this.backupFailed && !message.includes('respaldo')) message += ' · Respaldo local no disponible; exporta JSON.';
       this.onState({records:this.records, uid:this.uid, ready:this.ready, dirty:this.dirty, message, error}); }
     validUser(user) {
-      return user && user.emailVerified === true && typeof user.uid === 'string' &&
+      return user && user.trackerAccess === true && user.emailVerified === true && typeof user.uid === 'string' &&
         /^[A-Za-z0-9_-]{1,128}$/.test(user.uid) &&
         user.providerData?.some(provider => provider.providerId === 'google.com');
     }

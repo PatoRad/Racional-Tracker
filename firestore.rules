@@ -1,0 +1,66 @@
+// Prototipo NO desplegado. Revisar y probar antes de adopción.
+// Modelo: users/{uid}/portfolios/main {schemaVersion:2, revision:int >=1}.
+// movements/{id}: tipo enum, monto number +/-1e12 (positivo salvo rendimiento),
+// desc string 1..500, fecha timestamp 1900..2200, hora HH:mm o vacía,
+// clp/tc/acciones number 0..1e12, etf string <=30, orden int 0..1e15.
+// trackerAccess es un custom claim emitido solo por administración; no por documentos.
+// No se almacenan roles ni UID proporcionados por el cliente.
+// Toda escritura de movimientos requiere avanzar la revisión en la misma operación.
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function isAuthenticated() {
+      return request.auth != null &&
+        request.auth.token.email_verified == true &&
+        request.auth.token.trackerAccess == true &&
+        request.auth.token.firebase.sign_in_provider == 'google.com';
+    }
+    function isOwner(uid) { return isAuthenticated() && request.auth.uid == uid; }
+    function isValidMeta(data) {
+      return data.keys().hasOnly(['schemaVersion','revision']) &&
+        data.keys().hasAll(['schemaVersion','revision']) &&
+        data.schemaVersion == 2 && data.revision is int &&
+        data.revision >= 1 && data.revision <= 9007199254740991;
+    }
+    function isValidMovement(data) {
+      return data.keys().hasOnly(['tipo','monto','desc','fecha','hora','clp','tc','etf','acciones','orden']) &&
+        data.keys().hasAll(['tipo','monto','desc','fecha','hora','clp','tc','etf','acciones','orden']) &&
+        data.tipo in ['aporte','compra','venta','rendimiento','dividendo','retiro','comision','rebalanceo'] &&
+        data.monto is number && data.monto >= -1000000000000 && data.monto <= 1000000000000 &&
+        (data.tipo == 'rendimiento' || data.monto > 0) &&
+        data.desc is string && data.desc.size() >= 1 && data.desc.size() <= 500 &&
+        data.fecha is timestamp &&
+        data.fecha == data.fecha.date() &&
+        data.fecha >= timestamp.date(1900,1,1) && data.fecha < timestamp.date(2201,1,1) &&
+        data.hora is string && (data.hora == '' || data.hora.matches('^([01][0-9]|2[0-3]):[0-5][0-9]$')) &&
+        data.clp is number && data.clp >= 0 && data.clp <= 1000000000000 &&
+        data.tc is number && data.tc >= 0 && data.tc <= 1000000000000 &&
+        data.acciones is number && data.acciones >= 0 && data.acciones <= 1000000000000 &&
+        data.etf is string && data.etf.size() <= 30 &&
+        data.orden is int && data.orden >= 0 && data.orden <= 1000000000000000;
+    }
+    function advancesRevision(uid) {
+      let path = /databases/$(database)/documents/users/$(uid)/portfolios/main;
+      let after = getAfter(path).data;
+      return isValidMeta(after) &&
+        after.revision == (exists(path) ? get(path).data.revision + 1 : 1);
+    }
+    match /users/{uid}/portfolios/{portfolioId} {
+      allow read: if portfolioId == 'main' && isOwner(uid);
+      allow create: if portfolioId == 'main' && isOwner(uid) &&
+        isValidMeta(request.resource.data) && request.resource.data.revision == 1;
+      allow update: if portfolioId == 'main' && isOwner(uid) &&
+        isValidMeta(request.resource.data) &&
+        request.resource.data.revision == resource.data.revision + 1;
+      allow delete: if false;
+      match /movements/{id} {
+        allow read: if portfolioId == 'main' && isOwner(uid);
+        allow create, update: if portfolioId == 'main' && isOwner(uid) &&
+          id.matches('^[A-Za-z0-9_-]{8,64}$') &&
+          isValidMovement(request.resource.data) && advancesRevision(uid);
+        allow delete: if portfolioId == 'main' && isOwner(uid) && advancesRevision(uid);
+      }
+    }
+    match /{path=**} { allow read, write: if false; }
+  }
+}

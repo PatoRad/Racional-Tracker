@@ -1,0 +1,46 @@
+name: Cuentas seguras y reglas
+on:
+  push:
+    branches: ['audit/cuentas-seguras']
+    paths-ignore: ['docs/**', '**/*.md']
+  pull_request:
+    paths-ignore: ['docs/**', '**/*.md']
+permissions:
+  contents: read
+jobs:
+  pruebas:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - run: npm ci --ignore-scripts --no-audit --no-fund
+      - run: npm test
+      - run: npm run test:security
+  sitio:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      pages: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/jekyll-build-pages@v1
+        with:
+          source: ./
+          destination: ./_site
+      - name: Verificar aplicación y excluir herramientas de prueba
+        shell: bash
+        run: |
+          for asset in index.html account-store.js app-config.js; do
+            cmp "$asset" "_site/$asset"
+          done
+          for item in README.md docs tests package.json package-lock.json firebase.json firestore.rules prepare-preview.cjs access-check.js verificar-acceso.html storage-probe.js probar-guardado.html verificar-limite.html; do
+            test ! -e "_site/$item"
+          done

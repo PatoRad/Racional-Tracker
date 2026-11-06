@@ -1,0 +1,9 @@
+{
+  "score": 4,
+  "summary": "Prototipo por UID con Google verificado y autorizado por custom claim, esquema estricto por movimiento y revisión atómica. Probado en emulador; no es una evaluación de producción.",
+  "findings": [
+    {"check":"Storage Abuse","severity":"minor","issue":"No existe una cuota agregada segura por cuenta. Los límites por documento y operación no limitan el número total de documentos.","recommendation":"Definir admisión, cuotas, presupuestos y monitorización antes de abrir altas."},
+    {"check":"Recovery","severity":"minor","issue":"Los respaldos locales están en texto claro y dependen del perfil y origen del navegador.","recommendation":"Conservar un respaldo externo verificado y definir retención/cifrado para la adopción."}
+  ],
+  "unverified": ["Reglas realmente desplegadas", "Proveedores y dominios reales de Authentication", "Registro y enforcement de App Check", "OAuth y reCAPTCHA en navegador con configuración real", "IAM y controles de hosting"]
+}

@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="referrer" content="strict-origin-when-cross-origin">
+  <title>Verificar acceso — Racional Tracker</title>
+  <style>body{font:18px system-ui;background:#10232b;color:#edf5f7;margin:0;padding:24px}main{max-width:720px;margin:auto}button{font:inherit;padding:12px;margin:8px 8px 8px 0}section{padding:16px;border:1px solid #617981;margin:16px 0;border-radius:8px}pre{white-space:pre-wrap;overflow-wrap:anywhere;font:inherit}p{line-height:1.5}</style>
+  <script defer src="https://www.gstatic.com/firebasejs/13.2.0/firebase-app-compat.js"></script>
+  <script defer src="https://www.gstatic.com/firebasejs/13.2.0/firebase-auth-compat.js"></script>
+  <script defer src="https://www.gstatic.com/firebasejs/13.2.0/firebase-app-check-compat.js"></script>
+  <script defer src="app-config.js"></script>
+  <script defer src="access-check.js"></script>
+</head>
+<body><main>
+  <h1>Verificar acceso</h1>
+  <p>Esta prueba usa el proyecto Contabilidad para comprobar Google y App Check. No carga ni modifica movimientos. El acceso con Google puede crear tu cuenta de Authentication si todavía no existe.</p>
+  <section aria-live="polite">
+    <h2>Cuenta</h2>
+    <button id="login" disabled>Entrar con Google</button><button id="logout" disabled>Cerrar sesión</button>
+    <p id="auth-status">Preparando…</p><pre id="identity">Sin sesión</pre><p id="permission">Sin comprobar</p>
+  </section>
+  <section aria-live="polite"><h2>App Check</h2><button id="check" disabled>Comprobar App Check</button><p id="appcheck">Sin comprobar</p></section>
+  <p>Esta página muestra tu correo y UID, pero nunca muestra códigos de acceso ni tokens. Una comprobación correcta de App Check no demuestra por sí sola que Firestore lo exija.</p>
+</main></body></html>

@@ -617,6 +617,23 @@ function validarMovimiento(r) {
   }
   return true;
 }
+function resumenErroresImportacion(lista) {
+  const campos = ['id','orden','tipo','monto','desc','fecha','hora','clp','tc','etf','acciones'];
+  const counts = new Map();
+  const add = key => counts.set(key, (counts.get(key) || 0) + 1);
+  const base = {tipo:'rendimiento',monto:1,desc:'Comprobación local',fecha:'01/01/2000'};
+  for (const r of lista) {
+    if (validarMovimiento(r)) continue;
+    if (!r || typeof r !== 'object' || Array.isArray(r)) { add('estructura'); continue; }
+    if (Object.keys(r).some(key => !campos.includes(key))) add('campos adicionales');
+    for (const campo of campos) {
+      const sample = {...base, [campo]:r[campo]};
+      if (campo === 'monto' && TIPOS_VALIDOS.has(r.tipo)) sample.tipo = r.tipo;
+      if (!validarMovimiento(sample)) add(campo);
+    }
+  }
+  return [...counts].map(([field,count]) => field + ': ' + count).join('; ');
+}
 function importarJSON(ev) {
   if (!puedeEditar()) return;
   const epoch = store.epoch;
@@ -628,19 +645,27 @@ function importarJSON(ev) {
     if (store.epoch !== epoch) return;
     try {
       const data = JSON.parse(e.target.result);
-      if (data.version !== undefined && (data.version !== 2 || data.ownerUid !== store.uid)) {
+      if (data && data.version !== undefined && (data.version !== 2 || data.ownerUid !== store.uid)) {
         alert('Este respaldo pertenece a otra cuenta o usa un formato incompatible.'); return;
       }
-      if (!data || !Array.isArray(data.records) || data.records.length > 10000 || !data.records.every(validarMovimiento)) {
-        alert('Archivo con movimientos inválidos: no se importó nada.');
+      if (!data || !Array.isArray(data.records)) {
+        alert('El archivo no contiene la lista "records" de un respaldo compatible. No se importó nada.'); return;
+      }
+      if (data.records.length > 10000) {
+        alert('El respaldo supera 10000 movimientos. No se importó nada.'); return;
+      }
+      if (!data.records.every(validarMovimiento)) {
+        alert('Archivo con movimientos inválidos. Revisión local (campo: filas afectadas): ' + resumenErroresImportacion(data.records) + '. No se importó nada. No compartas los valores de tus movimientos.');
         return;
       }
-      store.normalize(data.records);
+      let normalized;
+      try { normalized = store.normalize(data.records); }
+      catch { alert('El respaldo contiene identificadores duplicados o un orden incompatible. No se importó nada.'); return; }
       if (!confirm('Esto reemplaza tus ' + records.length + ' movimientos actuales por los ' + data.records.length + ' del archivo. ¿Continuar?')) return;
       if (records.length && !guardarRespaldo(records)) {
         alert("Exporta JSON antes de importar: no hay respaldo local disponible."); return;
       }
-      records = data.records;
+      records = normalized;
       refresh();
       const ok = await save();
       if (!ok) {

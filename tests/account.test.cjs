@@ -161,6 +161,29 @@ test('importación versionada de otra cuenta se rechaza antes de cambiar vista',
   app.run("importarJSON({target:{files:[upload],value:'fake.json'}})");
   assert.equal(app.run('records[0].monto'),100);assert.equal(app.mockWrites.length,0);
 });
+test('importación inválida informa campos y conteos sin exponer valores ni escribir',async()=>{
+  const app=await loadApp([fixture()]);
+  app.context.upload={contents:JSON.stringify({records:[fixture({monto:'private-amount',desc:'',fecha:'private-date'}),fixture({monto:'another-private-amount'})]})};
+  app.run("importarJSON({target:{files:[upload],value:'fake.json'}})");await settle();
+  const message=app.alerts.at(-1);
+  assert.match(message,/monto: 2/);assert.match(message,/desc: 1/);assert.match(message,/fecha: 1/);
+  assert.doesNotMatch(message,/private-amount|private-date/);assert.equal(app.mockWrites.length,0);assert.equal(app.run('records.length'),1);
+});
+test('campos desconocidos no se reflejan como nombres privados en el diagnóstico',async()=>{
+  const app=await loadApp([]);
+  app.context.upload={contents:JSON.stringify({records:[{...fixture(),'private-field-name':'private-value'}]})};
+  app.run("importarJSON({target:{files:[upload],value:'fake.json'}})");await settle();
+  assert.match(app.alerts.at(-1),/campos adicionales: 1/);assert.doesNotMatch(app.alerts.at(-1),/private-field-name|private-value/);assert.equal(app.mockWrites.length,0);
+});
+test('respaldo legado del ajuste automático es compatible y cancelar no modifica datos',async()=>{
+  const app=await loadApp([fixture()],{confirm:false});
+  app.context.upload={contents:JSON.stringify({records:[{tipo:'rendimiento',monto:-5,desc:'Ajuste automático sintético',fecha:'01/01/2026',clp:0,tc:0,etf:''}]})};
+  app.run("importarJSON({target:{files:[upload],value:'fake.json'}})");await settle();
+  assert.equal(app.alerts.length,0);assert.equal(app.mockWrites.length,0);assert.equal(app.run('records[0].monto'),100);
+});
+test('JSON nulo o sin records se rechaza de forma específica y sin guardado',async()=>{
+  for(const contents of ['null','[]','{}']){const app=await loadApp([]);app.context.upload={contents};app.run("importarJSON({target:{files:[upload],value:'fake.json'}})");await settle();assert.match(app.alerts.at(-1),/no contiene la lista/);assert.equal(app.mockWrites.length,0);}
+});
 test('IDs duplicados, campos extra y montos fuera de límites se rechazan',async()=>{
   const app=await loadApp([fixture()]);
   app.context.invalid=fixture({role:'admin'});

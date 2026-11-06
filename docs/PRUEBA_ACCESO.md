@@ -1,5 +1,18 @@
 # Prueba de acceso previa a main
 
+## Estado actual confirmado por el propietario
+
+Google, autorización privada y emisión de App Check comprobados en sesión real.
+Reglas privadas publicadas con consentimiento y contenido verificado por MCP.
+CRUD ficticio completado con limpieza confirmada. Carga paginada corregida y
+confirmada como sincronizada. Importación de 220 registros en un destino vacío
+realizada por el propietario, con normalización de formato de dos fechas y
+persistencia confirmada tras recargar. No se inspeccionaron valores financieros.
+CI del candidato da9f2e1: 72 pruebas de cliente y 22 de emulador aprobadas.
+Pendientes: autorización/activación de enforcement de App Check en Firestore,
+verificación posterior de acceso, respaldo versionado del propietario y revisión
+final del PR/main. Los apartados siguientes conservan la evidencia de preparación.
+
 ## Evidencia del 6 de noviembre de 2026
 
 El propietario completó el inicio de sesión del CLI mediante callback local.

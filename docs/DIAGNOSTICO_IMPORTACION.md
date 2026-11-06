@@ -49,3 +49,12 @@ de dos cambios de formato, archivo original intacto, control de versión y
 persistencia UTC correcta de una fecha sintética tras consentimiento. Falta
 comprobar localmente si las dos fechas reales son formatos compatibles; no se
 afirma haber reparado ni importado el respaldo del propietario.
+
+## Resultado posterior informado por el propietario
+
+La captura siguiente mostró propuesta válida: normalizar el formato de dos
+fechas y reemplazar 0 registros por 220, dentro del límite de 400 cambios.
+Después de continuar, el propietario confirmó que todo seguía disponible
+tras recargar la aplicación. No se recibió ni se leyó el JSON ni se consultaron
+movimientos desde herramientas administrativas. Esta evidencia acredita su
+comprobación de persistencia, no una conciliación independiente de sus cifras.

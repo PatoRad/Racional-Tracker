@@ -134,12 +134,23 @@ prueba sintética; su captura confirmó creación, lectura, edición y eliminaci
 verificadas (`success: true`, `cleaned: true`, sin error). Suite ampliada:
 58 tests de cliente y 20 de emulador, también aprobados en CI del commit 485fb1b.
 
-Siguiente fase: coordinar respaldo/importación por el propietario. La selección
-de JSON valida y presenta los conteos antes de confirmar; cancelar ese diálogo
-no reemplaza la vista ni guarda en nube. Revisar antes de aceptar el límite de
-400 cambios y confirmar si el portafolio destino está vacío. No dividir un
-respaldo grande en importaciones que sustituyan el portafolio. No importar
-movimientos ni activar enforcement sin autorización.
+El propietario realizó la importación del respaldo tras revisar la confirmación:
+0 registros en destino y 220 en el archivo, dentro de los 400 cambios permitidos.
+Se normalizó exclusivamente el formato de dos fechas legadas válidas, con aviso
+previo y sin alterar el archivo original. Confirmó que todo seguía disponible
+después de recargar la página. El agente no leyó el respaldo ni consultó los
+movimientos o sus valores; la persistencia real es evidencia del propietario.
+Última suite del candidato da9f2e1: 72 tests de cliente y 22 de emulador aprobados
+en CI (run 42174120286).
+
+Siguiente fase: exigir App Check exclusivamente en Firestore, pendiente de
+autorización expresa. La nueva lectura del CLI confirmó todavía `Unenforced`,
+con replay protection `Off`. Cambio propuesto: `appcheck:services:set firestore
+enforced`, sin parámetro de replay ni cambios a Authentication. Los clientes
+sin token de App Check válido serán rechazados además de las reglas actuales.
+No se ha ejecutado ese cambio. Después verificar el acceso del propietario y
+preparar revisión final del PR antes de main. Mantener el respaldo original y
+exportar una copia versionada desde el cliente nuevo por acción del propietario.
 El documento heredado permanece cerrado por la regla de denegación general.
 
 Reversión segura: si falla la adopción, restaurar únicamente la copia previa

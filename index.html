@@ -617,6 +617,27 @@ function validarMovimiento(r) {
   }
   return true;
 }
+function normalizarFechaLegada(value) {
+  if (typeof value !== 'string') return null;
+  const text = value.trim();
+  let day,month,year;
+  const legacy = /^(\d{1,2})([\/-])(\d{1,2})\2(\d{4})$/.exec(text);
+  const iso = /^(\d{4})-(\d{2})-(\d{2})$/.exec(text);
+  if (legacy) { day=Number(legacy[1]); month=Number(legacy[3]); year=Number(legacy[4]); }
+  else if (iso) { year=Number(iso[1]); month=Number(iso[2]); day=Number(iso[3]); }
+  else return null;
+  if (year<1900 || year>2200) return null;
+  const date = new Date(Date.UTC(year,month-1,day));
+  if (date.getUTCFullYear()!==year || date.getUTCMonth()!==month-1 || date.getUTCDate()!==day) return null;
+  return String(day).padStart(2,'0')+'/'+String(month).padStart(2,'0')+'/'+year;
+}
+function motivoFechaImportacion(value) {
+  if (value == null || (typeof value==='string' && !value.trim())) return 'ausente';
+  if (typeof value !== 'string') return 'tipo incompatible';
+  if (normalizarFechaLegada(value) !== null) return 'formato no canónico';
+  if (/^\d{1,2}([\/-])\d{1,2}\1\d{4}$/.test(value.trim()) || /^\d{4}-\d{2}-\d{2}$/.test(value.trim())) return 'calendario o rango inválido';
+  return 'formato incompatible';
+}
 function resumenErroresImportacion(lista) {
   const campos = ['id','orden','tipo','monto','desc','fecha','hora','clp','tc','etf','acciones'];
   const counts = new Map();
@@ -629,7 +650,7 @@ function resumenErroresImportacion(lista) {
     for (const campo of campos) {
       const sample = {...base, [campo]:r[campo]};
       if (campo === 'monto' && TIPOS_VALIDOS.has(r.tipo)) sample.tipo = r.tipo;
-      if (!validarMovimiento(sample)) add(campo);
+      if (!validarMovimiento(sample)) add(campo==='fecha' ? 'fecha ('+motivoFechaImportacion(r.fecha)+')' : campo);
     }
   }
   return [...counts].map(([field,count]) => field + ': ' + count).join('; ');
@@ -654,14 +675,23 @@ function importarJSON(ev) {
       if (data.records.length > 10000) {
         alert('El respaldo supera 10000 movimientos. No se importó nada.'); return;
       }
-      if (!data.records.every(validarMovimiento)) {
-        alert('Archivo con movimientos inválidos. Revisión local (campo: filas afectadas): ' + resumenErroresImportacion(data.records) + '. No se importó nada. No compartas los valores de tus movimientos.');
+      let dateFormatChanges = 0;
+      const imported = data.records.map(r => {
+        if (data.version !== undefined || !r || typeof r !== 'object' || Array.isArray(r)) return r;
+        const fecha = normalizarFechaLegada(r.fecha);
+        if (fecha === null || fecha === r.fecha) return r;
+        dateFormatChanges++;
+        return {...r,fecha};
+      });
+      if (!imported.every(validarMovimiento)) {
+        alert('Archivo con movimientos inválidos. Revisión local (campo: filas afectadas): ' + resumenErroresImportacion(imported) + '. No se importó nada. No compartas los valores de tus movimientos.');
         return;
       }
       let normalized;
-      try { normalized = store.normalize(data.records); }
+      try { normalized = store.normalize(imported); }
       catch { alert('El respaldo contiene identificadores duplicados o un orden incompatible. No se importó nada.'); return; }
-      if (!confirm('Esto reemplaza tus ' + records.length + ' movimientos actuales por los ' + data.records.length + ' del archivo. ¿Continuar?')) return;
+      const dateNotice = dateFormatChanges ? 'Se normalizará solo el formato de '+dateFormatChanges+' fecha(s) del respaldo antiguo, conservando día, mes y año. El archivo original no se modifica.\n\n' : '';
+      if (!confirm(dateNotice + 'Esto reemplaza tus ' + records.length + ' movimientos actuales por los ' + imported.length + ' del archivo. ¿Continuar?')) return;
       if (records.length && !guardarRespaldo(records)) {
         alert("Exporta JSON antes de importar: no hay respaldo local disponible."); return;
       }

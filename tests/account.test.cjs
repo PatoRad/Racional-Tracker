@@ -166,7 +166,7 @@ test('importación inválida informa campos y conteos sin exponer valores ni esc
   app.context.upload={contents:JSON.stringify({records:[fixture({monto:'private-amount',desc:'',fecha:'private-date'}),fixture({monto:'another-private-amount'})]})};
   app.run("importarJSON({target:{files:[upload],value:'fake.json'}})");await settle();
   const message=app.alerts.at(-1);
-  assert.match(message,/monto: 2/);assert.match(message,/desc: 1/);assert.match(message,/fecha: 1/);
+  assert.match(message,/monto: 2/);assert.match(message,/desc: 1/);assert.match(message,/fecha \(formato incompatible\): 1/);
   assert.doesNotMatch(message,/private-amount|private-date/);assert.equal(app.mockWrites.length,0);assert.equal(app.run('records.length'),1);
 });
 test('campos desconocidos no se reflejan como nombres privados en el diagnóstico',async()=>{
@@ -183,6 +183,36 @@ test('respaldo legado del ajuste automático es compatible y cancelar no modific
 });
 test('JSON nulo o sin records se rechaza de forma específica y sin guardado',async()=>{
   for(const contents of ['null','[]','{}']){const app=await loadApp([]);app.context.upload={contents};app.run("importarJSON({target:{files:[upload],value:'fake.json'}})");await settle();assert.match(app.alerts.at(-1),/no contiene la lista/);assert.equal(app.mockWrites.length,0);}
+});
+test('fechas legadas conservan exactamente día mes y año al normalizar formato',async()=>{
+  const app=await loadApp([]);
+  for(const [input,expected] of [['1/2/2026','01/02/2026'],['01-02-2026','01/02/2026'],['2026-02-01','01/02/2026'],[' 29/2/2024 ','29/02/2024'],['31/12/2200','31/12/2200']]){
+    app.context.dateInput=input;assert.equal(app.run('normalizarFechaLegada(dateInput)'),expected);
+  }
+});
+test('normalización nunca inventa fechas vacías imposibles ambiguas ni con zona horaria',async()=>{
+  const app=await loadApp([]);
+  for(const input of ['',null,undefined,1234,'29/02/2025','31/04/2026','01/13/2026','01/01/1899','01/01/2201','01-02/2026','02.01.2026','2026-02-01T23:00:00-03:00']){
+    app.context.dateInput=input;assert.equal(app.run('normalizarFechaLegada(dateInput)'),null);
+  }
+});
+test('cancelar normalización de dos fechas no escribe ni cambia respaldo o vista',async()=>{
+  const app=await loadApp([fixture()],{confirm:false});
+  const contents=JSON.stringify({records:[fixture({fecha:'1/2/2026'}),fixture({fecha:'2026-02-03'})]});app.context.upload={contents};
+  app.run("importarJSON({target:{files:[upload],value:'fake.json'}})");await settle();
+  assert.equal(app.alerts.length,0);assert.match(app.calls.confirmations.at(-1),/formato de 2 fecha/);assert.match(app.calls.confirmations.at(-1),/conservando día, mes y año/);
+  assert.equal(app.context.upload.contents,contents);assert.equal(app.mockWrites.length,0);assert.equal(app.run('records.length'),1);assert.equal(app.run('records[0].fecha'),'01/01/2026');
+});
+test('confirmación de respaldo legado válido guarda la fecha canónica sin cambiar el monto',async()=>{
+  const app=await loadApp([]);app.context.upload={contents:JSON.stringify({records:[fixture({fecha:'2026-02-03',monto:123})]})};
+  app.run("importarJSON({target:{files:[upload],value:'fake.json'}})");await settle();
+  assert.equal(app.run('records[0].fecha'),'03/02/2026');assert.equal(app.run('records[0].monto'),123);assert.equal(app.store.dirty,false);assert.equal(app.store.revision,1);
+  const saved=[...app.db.data.entries()].find(([key])=>key.includes('/movements/'))[1];assert.equal(saved.fecha.toDate().toISOString(),'2026-02-03T00:00:00.000Z');
+});
+test('respaldo versionado no convierte formatos fuera de su esquema y no oculta fechas imposibles',async()=>{
+  for(const data of [{version:2,ownerUid:'user-a',records:[fixture({fecha:'2026-02-03'})]},{records:[fixture({fecha:'31/02/2026'})]},{records:[fixture({fecha:''})]}]){
+    const app=await loadApp([]);app.context.upload={contents:JSON.stringify(data)};app.run("importarJSON({target:{files:[upload],value:'fake.json'}})");await settle();assert.equal(app.mockWrites.length,0);assert.equal(app.calls.confirmations.length,0);assert.match(app.alerts.at(-1),/fecha \(/);
+  }
 });
 test('IDs duplicados, campos extra y montos fuera de límites se rechazan',async()=>{
   const app=await loadApp([fixture()]);

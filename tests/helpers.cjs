@@ -77,7 +77,7 @@ async function loadApp(initialRecords=[],options={}) {
     if(!elements.has(id)) elements.set(id,{value:'',textContent:'',innerHTML:'',hidden:false,disabled:false,style:{},dataset:{},classList:{add(){},remove(){},toggle(){},contains(){return false;}},focus(){}});
     return elements.get(id);
   };
-  let authCallback,authError; const calls={init:0,popup:0,persistence:[],appcheck:0};
+  let authCallback,authError; const calls={init:0,popup:0,persistence:[],appcheck:0,confirmations:[]};
   const auth={
     onAuthStateChanged(cb,error){authCallback=cb;authError=error; cb(options.user===undefined?user('user-a'):options.user);},
     async setPersistence(mode){calls.persistence.push(mode); if(options.persistenceFail) throw Error('persistence');},
@@ -101,7 +101,7 @@ async function loadApp(initialRecords=[],options={}) {
     window:{RACIONAL_CONFIG:options.config||{appCheckSiteKey:'synthetic-test-key',requireAppCheck:true},addEventListener(name,callback){events[name]=callback;}},
     Chart:class {destroy(){}},FileReader:Reader,
     Blob:class {constructor(parts){this.parts=parts;}},URL:{createObjectURL(blob){downloads.push(blob);return 'blob:synthetic';},revokeObjectURL(){}},
-    setTimeout(){},alert:msg=>alerts.push(msg),confirm:()=>options.confirm!==false
+    setTimeout(){},alert:msg=>alerts.push(msg),confirm:msg=>{calls.confirmations.push(msg);return options.confirm!==false;}
   });
   vm.runInContext(fs.readFileSync(path.join(root,'account-store.js'),'utf8'),context);
   vm.runInContext(source,context,{filename:'index.html:inline',timeout:1000});

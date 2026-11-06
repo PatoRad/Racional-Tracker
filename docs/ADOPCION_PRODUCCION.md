@@ -1,6 +1,6 @@
 # Adopción de producción — propuesta del 2026-11-06
 
-Estado: NO autorizada ni ejecutada. Rama audit/cuentas-seguras.
+Estado actualizado: contención publicada por el propietario según confirmación y captura. Adopción del cliente nuevo y reglas v2 NO desplegada. Rama audit/cuentas-seguras.
 La confirmación de respaldo del propietario no revoca la prohibición original
 de modificar main, hacer merge, desplegar o cambiar reglas/datos reales.
 
@@ -91,3 +91,33 @@ una herramienta de migración por lotes diseñada y ensayada por separado.
 Solo se actualizaron archivos Markdown. No cambia código, reglas ejecutables,
 configuración desplegable ni tests. Los resultados de 41+19 pruebas corresponden
 al código ya comprobado; no se repiten suites por una edición documental.
+
+
+## Avance confirmado por el propietario — 2026-11-06
+
+- Contención: el propietario confirmó publicar if false en la ruta heredada.
+  La captura conserva la ruta y estructura del ruleset. No se probó acceso al
+  documento ni se consultaron movimientos para verificar la propagación.
+- Google: captura de Authentication con proveedor Habilitada.
+- Dominio patorad.github.io: incorporación confirmada por el propietario.
+- App Check: captura de Libro de Contabilidad Registrada con Fraud Defense
+  (reCAPTCHA Enterprise). TTL configurado de 1 hora.
+- Site key pública entregada por texto e incorporada a app-config.js en
+  77d7e8e50bb7f9188a59029069750cde8685fdc3, manteniendo requireAppCheck=true.
+  Diff verificado: solo ese archivo de configuración y comentarios.
+- El enforcement de Firestore no se ha vuelto a verificar; el último estado
+  observado era No se aplica. No se ha instruido activarlo todavía.
+- Cuenta personal con trackerAccess: pendiente de habilitación administrativa.
+- Cliente nuevo: no publicado; main sin cambios por este trabajo.
+
+Verificaciones del cambio de clave:
+sintaxis JavaScript, valor exacto de la clave y configuración inmutable;
+41/41 tests de cliente y 19/19 de emulador/integración sin fallos ni omisiones:
+https://github.com/PatoRad/Racional-Tracker/actions/runs/42159190202
+Esto NO verifica el proveedor real: los tests usan claves e identidades ficticias.
+
+Siguiente fase pendiente: aprobar y preparar una publicación controlada de prueba
+en el dominio autorizado, sin merge a main; comprobar Google y App Check con la
+cuenta propietaria; habilitar administrativamente solo su UID; coordinar reglas
+v2 y cliente. No importar movimientos ni activar enforcement antes de resolver
+esos pasos y sus autorizaciones. El documento heredado debe permanecer cerrado.

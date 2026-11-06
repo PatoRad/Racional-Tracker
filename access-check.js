@@ -3,7 +3,7 @@
   const el = id => document.getElementById(id);
   const status = (id, text) => { el(id).textContent = text; };
   const authFailure = error => {
-    // Only render known codes and our own text, never SDK messages/customData.
+    // Only render bounded Firebase Auth codes and our own text, never messages/customData.
     const hints = {
       'auth/unauthorized-domain': 'Falta autorizar el dominio de esta página en Authentication.',
       'auth/popup-blocked': 'El navegador bloqueó la ventana. Permite ventanas emergentes para esta página.',
@@ -16,9 +16,13 @@
       'auth/invalid-app-credential': 'La credencial de aplicación no fue aceptada. Necesitamos revisar App Check.',
       'auth/internal-error': 'Firebase devolvió un error interno. Necesitamos revisar la configuración.'
     };
-    return Object.prototype.hasOwnProperty.call(hints, error?.code)
+    const code = typeof error?.code === 'string' && /^auth\/[a-z][a-z0-9.-]{0,95}$/.test(error.code) ? error.code : null;
+    if (code && !Object.prototype.hasOwnProperty.call(hints, code)) {
+      return 'No se completó el acceso (' + code + '). Comparte únicamente este código para revisar la causa.';
+    }
+    return Object.prototype.hasOwnProperty.call(hints, code)
       ? 'No se completó el acceso (' + error.code + '). ' + hints[error.code]
-      : 'No se completó el acceso (error no identificado). Requiere diagnóstico adicional.';
+      : 'No se completó el acceso (error no identificado; ' + (['TypeError', 'ReferenceError', 'SecurityError'].includes(error?.name) ? error.name : 'sin código Auth') + '). Requiere diagnóstico adicional.';
   };
   let generation = 0;
   const clear = () => {

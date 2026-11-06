@@ -44,11 +44,27 @@ HTTP de sitio web. Se corrigió a `strict-origin-when-cross-origin`: envía el
 origen a otros sitios HTTPS sin enviar la ruta ni la consulta de la página.
 Se conserva el control por dominio y no se amplían APIs.
 
-Propuesta pendiente de autorización para la clave de producción: preservar
+Cambio autorizado expresamente por el propietario y aplicado el 6 de noviembre
+de 2026 a las 02:18 (America/Santiago): preservar
 `patorad.github.io/*` y agregar exclusivamente
 `https://contabilidad-4f074--audit-acceso-sfey17m6.web.app/*` y
 `https://contabilidad-4f074.firebaseapp.com/*` (origen del manejador de Google).
-Conservar toda la lista actual de restricciones de APIs. El permiso del
+Se conservó toda la lista actual de restricciones de APIs. La operación utilizó
+el etag como control de concurrencia, guardó los metadatos previos localmente
+(sin credenciales) y verificó mediante lectura posterior que las restricciones
+coinciden exactamente con la actualización autorizada. Tres pruebas locales
+del procedimiento comprobaron preservación de otros sitios/APIs, idempotencia
+y rechazo de proyecto/estado inesperados.
+
+Después del cambio, la prueba de navegador en el dominio temporal mostró
+«App Check entregó un token». No se mostró ni se copió el token y no se consultó
+Firestore. Esto verifica emisión en esa sesión, no enforcement ni el acceso
+del propietario a su portafolio. La sesión real con Google sigue pendiente.
+
+El permiso del
 dominio temporal debe retirarse después de cerrar la prueba, en un paso
 autorizado. La caducidad de Hosting no elimina automáticamente estos permisos.
-No se considera resuelto hasta verificar la autenticación y App Check reales.
+No se considera completa la adopción hasta verificar Google con el propietario,
+su permiso privado y las condiciones restantes de producción. Main, reglas,
+enforcement y movimientos no se modificaron en este paso.
+

@@ -209,3 +209,19 @@ test('error de autenticación limpia también identidad visible y acciones priva
   assert.equal(app.element('private-actions').hidden,true);
   assert.equal(app.run('records.length'),0);
 });
+test('ajuste automático fuera de límites no modifica registros ni crea un borrador inválido',async()=>{
+  const app=await loadApp([fixture({monto:1e12}),fixture({monto:1e12})]);
+  app.element('valor-actual-inp').value='0';
+  app.run('registrarRendimientoAuto()');
+  assert.equal(app.run('records.length'),2);
+  assert.equal(app.store.dirty,false);assert.equal(app.mockWrites.length,0);
+  assert.ok(app.alerts.some(msg=>msg.includes('límites')));
+});
+test('ajuste automático válido se guarda con el mismo esquema que los demás movimientos',async()=>{
+  const app=await loadApp([fixture()]);
+  app.element('valor-actual-inp').value='110';
+  app.run('registrarRendimientoAuto()');
+  assert.equal(await app.run('colaGuardado'),true);
+  assert.equal(app.run('records.at(-1).tipo'),'rendimiento');
+  assert.equal(app.run('records.at(-1).monto'),10);
+});

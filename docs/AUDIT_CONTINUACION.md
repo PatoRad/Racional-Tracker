@@ -1,3 +1,5 @@
+> Informe histórico de la rama anterior. El modelo actual y sus límites están documentados en [CUENTAS_SEGURAS.md](CUENTAS_SEGURAS.md).
+
 # Continuación de auditoría — 2026-11-05
 
 Estado: cambios en audit/sincronizacion-respaldo-seguro, desde

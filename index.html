@@ -605,6 +605,7 @@ function importarJSON(ev) {
   if (!puedeEditar()) return;
   const epoch = store.epoch;
   const file = ev.target.files[0]; if (!file) return;
+  ev.target.value = '';
   if (file.size && file.size > 2*1024*1024) { alert('El archivo supera 2 MB.'); return; }
   const reader = new FileReader();
   reader.onload = async e => {
@@ -633,6 +634,7 @@ function importarJSON(ev) {
       setSt('✔ Importado','var(--green)',2500);
     } catch (err) { alert('Archivo JSON inválido.'); }
   };
+  reader.onerror = () => { if (store.epoch === epoch) alert('No se pudo leer el archivo. No se modificaron tus movimientos.'); };
   reader.readAsText(file);
   ev.target.value = '';
 }
@@ -1135,7 +1137,9 @@ function registrarRendimientoAuto() {
   const valorActualCalc = Math.max(0, aportes - retiros + rend - comis);
   const delta = Math.round((nuevoValor - valorActualCalc) * 100) / 100;
   if (delta === 0) { setSt('Sin cambios en el rendimiento', 'var(--muted)', 2500); return; }
-  records.push({tipo:'rendimiento', monto: delta, desc: 'Ajuste automático (valor Racional: '+fmtU(nuevoValor)+')', fecha: hoy(), clp:0, tc:0, etf:''});
+  const ajuste = {tipo:'rendimiento', monto: delta, desc: 'Ajuste automático (valor Racional: '+fmtU(nuevoValor)+')', fecha: hoy(), clp:0, tc:0, etf:''};
+  if (!validarMovimiento(ajuste)) { alert('El ajuste supera los límites permitidos. Revisa el valor y tus movimientos.'); return; }
+  records.push(ajuste);
   save(); refresh();
   inp.value = '';
 

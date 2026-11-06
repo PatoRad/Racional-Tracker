@@ -1,3 +1,5 @@
+> Informe histórico de la rama anterior. El modelo actual y sus límites están documentados en [CUENTAS_SEGURAS.md](CUENTAS_SEGURAS.md).
+
 # Auditoría de seguridad de Firebase / Firestore — Etapa 3
 
 **Estado: propuesta NO desplegada.** Fecha: 2026-11-04. Rama: `audit/firebase-firestore-seguridad`.

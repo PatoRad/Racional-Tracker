@@ -104,3 +104,15 @@ Fuentes oficiales:
 - https://firebase.google.com/docs/firestore/manage-data/transactions
 - https://firebase.google.com/docs/firestore/security/rules-fields
 - https://firebase.google.com/docs/app-check/web/recaptcha-enterprise-provider
+## Verificación registrada
+
+Primera ejecución de esta rama, commit 523e608:
+https://github.com/PatoRad/Racional-Tracker/actions/runs/42147079200
+36/36 pruebas de cliente y 18/18 de reglas/integración, sin fallos ni omisiones.
+Incluye cliente real en emulador y dos sesiones con estado desactualizado.
+La revisión posterior añadió cobertura del ajuste automático y evitó lecturas
+tardías de sesiones anteriores; esos cambios requieren la ejecución siguiente.
+
+Prueba de navegador local: pantalla de acceso bloqueada correctamente al faltar
+la site key, portafolio oculto, sin errores ni advertencias de consola.
+No se inició Firebase ni se leyó el documento heredado en esa comprobación.

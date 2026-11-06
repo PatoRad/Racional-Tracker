@@ -92,10 +92,12 @@
     async load(snapshot, epoch = this.epoch, attempt = 0) {
       if (epoch !== this.epoch || snapshot.metadata?.hasPendingWrites || snapshot.metadata?.fromCache || this.dirty) return;
       const seq = ++this.seq;
+      const meta = this.meta, movements = this.movements;
       try {
         const revision = this.revisionOf(snapshot);
-        const query = await this.movements.limit(MAX_RECORDS + 1).get({source:'server'});
-        const check = await this.meta.get({source:'server'});
+        const query = await movements.limit(MAX_RECORDS + 1).get({source:'server'});
+        if (epoch !== this.epoch || seq !== this.seq || this.dirty) return;
+        const check = await meta.get({source:'server'});
         if (epoch !== this.epoch || seq !== this.seq || this.dirty) return;
         if (this.revisionOf(check) !== revision) {
           if (attempt >= 2) throw Error('busy');
@@ -154,7 +156,7 @@
         const changed = payload.filter(record => !old.has(record.id) || canonical(old.get(record.id)) !== canonical(record));
         const removed = this.base.filter(record => !next.has(record.id));
         if (changed.length + removed.length > MAX_WRITES) {
-          this.emit('Esta operación supera 400 cambios. No se guardó parcialmente; conserva el JSON y divide la importación.', true);
+          this.emit('Esta operación supera 400 cambios. No se guardó parcialmente; exporta JSON; se necesita una migración por lotes.', true);
           return false;
         }
         if (!changed.length && !removed.length) {

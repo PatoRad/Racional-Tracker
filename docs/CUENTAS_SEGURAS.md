@@ -141,3 +141,22 @@ como nombre de activo: calcCostoPromedio trataba propiedades heredadas como ETF
 objetivo y podía alterar Object.prototype dentro de la aplicación. Se corrigió
 usando una comprobación de propiedad propia, igual que en calcEtfReal.
 El caso queda como regresión permanente con datos sintéticos.
+
+## Resultado final verificado — 2026-11-05
+
+Código probado: 23a188fc5e3de081d1c5b3dc052add063a414322.
+Commits de implementación: 523e608 (cuentas y esquema), 252b81b (ajustes/lecturas),
+d08a64b (admisión administrativa), 23a188f (propiedades heredadas de ETF).
+Ejecución: https://github.com/PatoRad/Racional-Tracker/actions/runs/42149008513
+Job 127667374681: success. Logs: 41/41 pruebas del cliente y 19/19 pruebas del
+emulador/integración; cero fallos y cero omisiones. La suite del emulador incluye
+el cliente con SDK real, aislamiento por UID, Google verificado, permiso emitido
+por administrador, revisiones y rollback atómico.
+También se ejecutó el emulador local con el proyecto demo tras completar la
+instalación; se detuvo correctamente al terminar. El servidor HTTP de QA se cerró.
+Main permanece en d22b3790188907481bfd7f5df8885689ee904e6f.
+
+Estado de adopción: NO desplegado. Pendiente iniciar sesión Firebase, auditar
+configuración real, preparar Google/dominio/App Check y autorizar el UID del
+propietario en un procedimiento separado. Ni las pruebas ni el resultado de
+get_environment prueban reglas o enforcement de producción.

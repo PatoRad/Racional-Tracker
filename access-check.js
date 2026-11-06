@@ -2,6 +2,24 @@
 (async function () {
   const el = id => document.getElementById(id);
   const status = (id, text) => { el(id).textContent = text; };
+  const authFailure = error => {
+    // Only render known codes and our own text, never SDK messages/customData.
+    const hints = {
+      'auth/unauthorized-domain': 'Falta autorizar el dominio de esta página en Authentication.',
+      'auth/popup-blocked': 'El navegador bloqueó la ventana. Permite ventanas emergentes para esta página.',
+      'auth/popup-closed-by-user': 'La ventana se cerró antes de completar Google. Reintenta y mantenla abierta.',
+      'auth/cancelled-popup-request': 'Había otra ventana de acceso abierta. Ciérrala y reintenta una sola vez.',
+      'auth/operation-not-allowed': 'Comprueba que Google esté habilitado en Authentication.',
+      'auth/network-request-failed': 'No se pudo conectar. Comprueba la conexión y las extensiones del navegador.',
+      'auth/invalid-api-key': 'La configuración de la clave de API necesita revisión.',
+      'auth/api-key-not-valid.-please-pass-a-valid-api-key.': 'La configuración de la clave de API necesita revisión.',
+      'auth/invalid-app-credential': 'La credencial de aplicación no fue aceptada. Necesitamos revisar App Check.',
+      'auth/internal-error': 'Firebase devolvió un error interno. Necesitamos revisar la configuración.'
+    };
+    return Object.prototype.hasOwnProperty.call(hints, error?.code)
+      ? 'No se completó el acceso (' + error.code + '). ' + hints[error.code]
+      : 'No se completó el acceso (error no identificado). Requiere diagnóstico adicional.';
+  };
   let generation = 0;
   const clear = () => {
     generation++;
@@ -46,7 +64,7 @@
         provider.setCustomParameters({ prompt: 'select_account' });
         await auth.signInWithPopup(provider);
         status('auth-status', 'Inicio de sesión completado');
-      } catch { status('auth-status', 'No se completó el acceso. Comprueba el dominio autorizado y permite la ventana de Google.'); }
+      } catch (error) { status('auth-status', authFailure(error)); }
       finally { el('login').disabled = false; }
     };
     el('logout').onclick = async () => {

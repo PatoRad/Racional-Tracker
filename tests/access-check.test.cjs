@@ -5,10 +5,10 @@ const fs=require('node:fs');
 const vm=require('node:vm');
 const source=fs.readFileSync(require('node:path').join(__dirname,'../access-check.js'),'utf8');
 const tick=()=>new Promise(resolve=>setImmediate(resolve));
-async function setup({missing=false,failCheck=false}={}) {
+async function setup({missing=false,failCheck=false,popupCode}={}) {
   const nodes=Object.fromEntries(['identity','permission','auth-status','appcheck','login','logout','check'].map(id=>[id,{textContent:'',disabled:true}]));
   let listener,initialized=0;
-  const auth={setPersistence:async()=>{},onAuthStateChanged:fn=>{listener=fn;fn(null);},signOut:async()=>listener(null),signInWithPopup:async()=>{throw Error('private-error-token');}};
+  const auth={setPersistence:async()=>{},onAuthStateChanged:fn=>{listener=fn;fn(null);},signOut:async()=>listener(null),signInWithPopup:async()=>{throw Object.assign(Error('private-error-token'),{code:popupCode,customData:{token:'private-custom-token'}});}};
   const authFactory=()=>auth;
   authFactory.Auth={Persistence:{SESSION:'session'}};
   authFactory.GoogleAuthProvider=class {setCustomParameters(){}};
@@ -21,6 +21,8 @@ async function setup({missing=false,failCheck=false}={}) {
   return {nodes,listener:()=>listener,initialized:()=>initialized,text:()=>Object.values(nodes).map(n=>n.textContent).join(' ')};
 }
 test('missing config blocks initialization and buttons',async()=>{const s=await setup({missing:true});assert.equal(s.initialized(),0);assert.equal(s.nodes.login.disabled,true);});
+test('known popup error displays only its safe code and actionable guidance',async()=>{const s=await setup({popupCode:'auth/unauthorized-domain'});await s.nodes.login.onclick();assert.match(s.nodes['auth-status'].textContent,/auth\/unauthorized-domain/);assert.match(s.nodes['auth-status'].textContent,/Falta autorizar/);assert.doesNotMatch(s.text(),/private-error-token|private-custom-token/);});
+test('unknown popup code is not reflected into the page',async()=>{const s=await setup({popupCode:'secret-unexpected-code'});await s.nodes.login.onclick();assert.match(s.nodes['auth-status'].textContent,/error no identificado/);assert.doesNotMatch(s.text(),/secret-unexpected-code|private-error-token|private-custom-token/);});
 test('App Check succeeds without rendering its token or accessing Firestore',async()=>{const s=await setup();await s.nodes.check.onclick();assert.match(s.nodes.appcheck.textContent,/entregó un token/);assert.doesNotMatch(s.text(),/secret-app-check-token/);});
 test('App Check errors do not expose raw errors',async()=>{const s=await setup({failCheck:true});await s.nodes.check.onclick();assert.match(s.nodes.appcheck.textContent,/falló/);assert.doesNotMatch(s.text(),/private-error-token/);assert.equal(s.nodes.check.disabled,false);});
 test('signout invalidates an outstanding identity response',async()=>{const s=await setup();let finish;const response=new Promise(r=>finish=r);const pending=s.listener()({email:'owner@example.test',uid:'owner',emailVerified:true,getIdTokenResult:()=>response});await s.nodes.logout.onclick();finish({token:'private-id-token',claims:{trackerAccess:true,firebase:{sign_in_provider:'google.com'}}});await pending;assert.equal(s.nodes.identity.textContent,'Sin sesión');assert.doesNotMatch(s.text(),/owner|private-id-token/);});

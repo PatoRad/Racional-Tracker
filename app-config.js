@@ -1,6 +1,7 @@
 // Configuración pública de adopción. Nunca colocar credenciales privadas aquí.
-// La nube permanece deshabilitada hasta registrar App Check en el proyecto.
+// Site key pública de reCAPTCHA Enterprise registrada por el propietario.
+// El enforcement de App Check se administra por separado en Firebase.
 window.RACIONAL_CONFIG = Object.freeze({
-  appCheckSiteKey: '',
+  appCheckSiteKey: '6LfIghIuAAAAABhN723YKrvF8we1fgQkpjJOzKSM',
   requireAppCheck: true
 });

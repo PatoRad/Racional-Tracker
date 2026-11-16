@@ -14,10 +14,10 @@ La sesión real, las reglas, App Check, el guardado y la recuperación del respa
 
 - Registro, edición, filtrado y eliminación de movimientos.
 - Conversión referencial CLP/USD con tipo de cambio ingresado manualmente.
-- Valor estimado a partir de movimientos, rendimiento y comisiones, no de precios de mercado.
+- Depósitos, retiros, aporte neto, dividendos, ajustes y comisiones separados. Saldo contable del Libro; Racional es la fuente del valor de mercado.
 - Asignación objetivo para VOO, VXUS, VWO, XLE, GLDM y VNQ.
 - Asignación estimada por **costo histórico remanente** cuando existen unidades registradas; no representa la valoración de mercado.
-- Costo promedio, rendimiento simple y rentabilidad anualizada estimada (XIRR).
+- Costo promedio e historial mensual de depósitos, retiros y aporte neto acumulado. No se calcula rentabilidad de mercado ni XIRR desde el Libro.
 - Importación/exportación JSON y exportación XLSX.
 
 ## Arquitectura
@@ -80,3 +80,13 @@ No ejecutar pruebas destructivas contra datos reales, no publicar credenciales p
 ## Auditoría Firebase / Firestore (Etapa 3)
 
 El historial de las ramas de auditoría está en [docs/FIREBASE_SECURITY_AUDIT.md](docs/FIREBASE_SECURITY_AUDIT.md). Las reglas privadas, el permiso del propietario y la exigencia de App Check se adoptaron posteriormente con autorizaciones expresas; véase [docs/ADOPCION_PRODUCCION.md](docs/ADOPCION_PRODUCCION.md). No publicar cambios de reglas ni configuraciones de producción sin revisión y autorización.
+
+## Claridad financiera (Punto 2)
+
+Aporte neto = depósitos − retiros. Saldo del Libro = aporte neto + dividendos + ajustes − comisiones. Compras, ventas y rebalanceos son operaciones internas: no vuelven a sumar o restar capital externo. Las posiciones se siguen mostrando por costo remanente, no a precio de mercado.
+
+Los movimientos legados `rendimiento` se presentan como ajustes registrados sin cambiar su tipo, descripción ni monto. No se puede determinar automáticamente si un rendimiento manual histórico ya incluía un dividendo: el desglose permite revisarlo, sin deduplicar ni modificar registros históricos. La conciliación solicitada por el usuario registra solo el delta entre el valor informado de Racional y el saldo completo del Libro; repetir el mismo valor sin otros movimientos no agrega otro ajuste. El saldo firmado evita perder diferencias cuando el Libro es negativo.
+
+El historial agrupa los meses con depósitos o retiros; excluye compras, ventas, dividendos y ajustes. El gráfico usa los mismos acumulados y la meta mide aporte neto. Se retiraron las rentabilidades inferidas del saldo contable porque no existe una serie de valores de mercado fechados. No hay migración, cambio de esquema, cambio de reglas ni despliegue de Firestore.
+
+Pruebas de cálculo y regresión: `npm test` (78 casos, con dobles de Firebase y datos sintéticos). La suite de reglas se ejecuta por separado en CI mediante el emulador local (`npm run test:security`).

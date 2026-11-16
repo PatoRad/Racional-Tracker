@@ -205,19 +205,19 @@ tr:hover td{background:rgba(255,255,255,.02)}
 
   <div class="kpis">
     <div class="kpi">
-      <div class="kpi-label">Total aportado</div>
+      <div class="kpi-label">Depósitos</div>
       <div class="kpi-val gold" id="ki">$0</div>
-      <div class="kpi-sub" id="ki-sub">0 aportes</div>
+      <div class="kpi-sub" id="ki-sub">Aporte neto: $0</div>
     </div>
     <div class="kpi">
-      <div class="kpi-label">Rendimiento</div>
+      <div class="kpi-label">Ajustes registrados</div>
       <div class="kpi-val g" id="kr">$0</div>
-      <div class="kpi-sub" id="kr-pct">0.00%</div>
+      <div class="kpi-sub" id="kr-pct">Ajustes del Libro</div>
     </div>
     <div class="kpi">
-      <div class="kpi-label">Valor estimado</div>
+      <div class="kpi-label">Saldo del Libro</div>
       <div class="kpi-val b" id="kv">$0</div>
-      <div class="kpi-sub">portafolio total</div>
+      <div class="kpi-sub">registro contable · no es valor de mercado</div>
     </div>
     <div class="kpi">
       <div class="kpi-label">Comisiones</div>
@@ -229,18 +229,15 @@ tr:hover td{background:rgba(255,255,255,.02)}
   <div class="tabs">
     <button class="tab on" onclick="go('portafolio',this)">Portafolio</button>
     <button class="tab" onclick="go('aportes',this)">Aportes</button>
-    <button class="tab" onclick="go('rendimiento',this)">Rendimiento</button>
+    <button class="tab" onclick="go('rendimiento',this)">Resumen financiero</button>
   </div>
 
   <!-- PORTAFOLIO -->
   <div id="sec-portafolio" class="section on">
     <div class="card" id="prox-card">
-      <div class="card-title">Este mes, todo el aporte a</div>
-      <div id="prox-body"></div>
-      <div class="meta-input-row" style="justify-content:center;margin:12px 0 0">
-        <label>Monto a comprar (USD, opcional)</label>
-        <input type="number" id="prox-monto" placeholder="ej: 26.00" min="0" step="0.01" oninput="renderProximoAporte()"/>
-      </div>
+      <div class="card-title">Historial de aportes</div>
+      <p class="dim">Depósitos y retiros por mes. Las compras usan fondos de la cuenta y no son nuevos aportes.</p>
+      <div id="prox-body" class="tbl-wrap"></div>
     </div>
     <div class="etf-list" id="etf-list"></div>
     <div id="portafolio-nota" style="display:none;font-size:12px;color:var(--muted);margin:-12px 0 16px;padding:0 4px">
@@ -276,7 +273,7 @@ tr:hover td{background:rgba(255,255,255,.02)}
           <option value="aporte">Depósito</option>
           <option value="compra">Compra</option>
           <option value="retiro">Retiro</option>
-          <option value="rendimiento">Rendimiento</option>
+          <option value="rendimiento">Ajuste registrado</option>
           <optgroup label="Más tipos">
             <option value="venta">Venta</option>
             <option value="dividendo">Dividendo</option>
@@ -329,7 +326,7 @@ tr:hover td{background:rgba(255,255,255,.02)}
         <button class="ftab on" data-t="todos" onclick="filtrar('todos',this)">Todos</button>
         <button class="ftab" data-t="aporte" onclick="filtrar('aporte',this)">Depósitos</button>
         <button class="ftab" data-t="compra" onclick="filtrar('compra',this)">Compras</button>
-        <button class="ftab" data-t="rendimiento" onclick="filtrar('rendimiento',this)">Rendimiento</button>
+        <button class="ftab" data-t="rendimiento" onclick="filtrar('rendimiento',this)">Ajustes registrados</button>
         <button class="ftab" data-t="dividendo" onclick="filtrar('dividendo',this)">Dividendos</button>
         <button class="ftab" data-t="retiro" onclick="filtrar('retiro',this)">Retiros</button>
         <button class="ftab" data-t="comision" onclick="filtrar('comision',this)">Comisiones</button>
@@ -357,7 +354,7 @@ tr:hover td{background:rgba(255,255,255,.02)}
   <!-- RENDIMIENTO -->
   <div id="sec-rendimiento" class="section">
     <div class="card" id="valor-actual-card">
-      <div class="card-title">Registrar valor actual del portafolio</div>
+      <div class="card-title">Conciliar el Libro con Racional</div>
       <div class="form-row" style="margin-bottom:0;padding:0;border:none;background:none">
         <div class="field">
           <label>Valor actual en Racional (USD)</label>
@@ -365,10 +362,10 @@ tr:hover td{background:rgba(255,255,255,.02)}
         </div>
         <button class="btn-add" onclick="registrarRendimientoAuto()">Registrar</button>
       </div>
-      <div style="font-size:11.5px;color:var(--faint);margin-top:10px;line-height:1.5">Copia el valor total que te muestra la app de Racional y la diferencia contra lo aportado se calcula y se registra sola como Rendimiento — no necesitas hacer la resta a mano.</div>
+      <div style="font-size:11.5px;color:var(--faint);margin-top:10px;line-height:1.5">Racional es la fuente del valor de mercado. Este botón registra solo la diferencia contra el saldo del Libro como ajuste de conciliación; no agrega otra vez depósitos, dividendos ni comisiones. El Libro no guarda una serie de cotizaciones de mercado.</div>
     </div>
     <div class="meta-input-row">
-      <label>Meta de portafolio (USD)</label>
+      <label>Meta de aporte neto (USD)</label>
       <input type="number" id="meta-inp" placeholder="ej: 5000" oninput="renderRendimiento()"/>
     </div>
     <div class="meta-bar-wrap" id="prog-wrap">
@@ -379,7 +376,7 @@ tr:hover td{background:rgba(255,255,255,.02)}
     <div class="stat-row minor" id="stat-row2"></div>
     <div id="xirr-nota" style="display:none;font-size:11.5px;color:var(--faint);margin:-4px 0 16px;padding:0 4px;line-height:1.5"></div>
     <div class="card">
-      <div class="card-title">Aportado acumulado vs. valor estimado en el tiempo</div>
+      <div class="card-title">Depósitos, retiros y aporte neto acumulados</div>
       <div style="position:relative;height:220px">
         <canvas id="line-canvas" role="img" aria-label="Evolución en el tiempo"></canvas>
       </div>
@@ -398,7 +395,7 @@ tr:hover td{background:rgba(255,255,255,.02)}
         <option value="aporte">Depósito</option>
         <option value="compra">Compra</option>
         <option value="retiro">Retiro</option>
-        <option value="rendimiento">Rendimiento</option>
+        <option value="rendimiento">Ajuste registrado</option>
         <optgroup label="Más tipos">
           <option value="venta">Venta</option>
           <option value="dividendo">Dividendo</option>
@@ -726,7 +723,7 @@ const parseFechaHora = r => {
 
 const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const TYPE_COLORS = {aporte:'var(--gold)',compra:'var(--blue)',venta:'var(--red)',rendimiento:'#b794f6',dividendo:'var(--green)',retiro:'var(--red)',comision:'var(--muted)',rebalanceo:'var(--muted)'};
-const TYPE_LABELS = {aporte:'Depósito',compra:'Compra',venta:'Venta',rendimiento:'Rendimiento',dividendo:'Dividendo',retiro:'Retiro',comision:'Comisión',rebalanceo:'Rebalanceo'};
+const TYPE_LABELS = {aporte:'Depósito',compra:'Compra',venta:'Venta',rendimiento:'Ajuste registrado',dividendo:'Dividendo',retiro:'Retiro',comision:'Comisión',rebalanceo:'Rebalanceo'};
 const TYPE_SIGN   = {aporte:'+',compra:'+',venta:'−',rendimiento:r=>r.monto>=0?'+':'−',dividendo:'+',retiro:'−',comision:'−',rebalanceo:'±'};
 
 function toggleForm() {
@@ -738,20 +735,25 @@ function toggleForm() {
 
 function refresh() { updateKPIs(); renderTabla(); renderPortafolio(); renderRendimiento(); }
 
+// Resumen contable: compras/ventas y rebalanceos son movimientos internos.
+// Los registros legados "rendimiento" se muestran como ajustes sin reescribirlos.
+function resumenLibro(list = records) {
+  const sum = tipo => list.filter(r => r.tipo === tipo).reduce((s,r) => s+r.monto,0);
+  const depositos=sum('aporte'), retiros=sum('retiro'), dividendos=sum('dividendo');
+  const ajustes=sum('rendimiento'), comisiones=sum('comision');
+  const neto=depositos-retiros;
+  return {depositos,retiros,neto,dividendos,ajustes,comisiones,saldo:neto+dividendos+ajustes-comisiones};
+}
+
 function updateKPIs() {
-  const sum = t => records.filter(r=>r.tipo===t).reduce((s,r)=>s+r.monto,0);
-  const aportes = sum('aporte'), rend = sum('rendimiento') + sum('dividendo');
-  const retiros = sum('retiro'), comis = sum('comision');
-  const nA = records.filter(r=>r.tipo==='aporte').length;
-  const valor = Math.max(0, aportes - retiros + rend - comis);
-  const pct = aportes > 0 ? rend/aportes*100 : 0;
-  document.getElementById('ki').textContent    = fmtU(aportes);
-  document.getElementById('ki-sub').textContent = nA + ' depósito' + (nA!==1?'s':'');
-  document.getElementById('kr').textContent    = (rend>=0?'+':'')+fmtSignedU(rend);
-  document.getElementById('kr').className      = 'kpi-val '+(rend>=0?'g':'r');
-  document.getElementById('kr-pct').textContent = (rend>=0?'+':'')+pct.toFixed(2)+'%';
-  document.getElementById('kv').textContent    = fmtU(valor);
-  document.getElementById('kc').textContent    = fmtU(comis);
+  const x=resumenLibro();
+  document.getElementById('ki').textContent=fmtU(x.depositos);
+  document.getElementById('ki-sub').textContent='Aporte neto: '+fmtSignedU(x.neto);
+  document.getElementById('kr').textContent=fmtSignedU(x.ajustes);
+  document.getElementById('kr').className='kpi-val '+(x.ajustes>=0?'g':'r');
+  document.getElementById('kr-pct').textContent='Ajustes del Libro; no rentabilidad de mercado';
+  document.getElementById('kv').textContent=fmtSignedU(x.saldo);
+  document.getElementById('kc').textContent=fmtU(x.comisiones);
 }
 
 function renderTabla() {
@@ -963,33 +965,27 @@ function calcEtfReal() {
   return { pcts, compras: posicion, totalCompras, acciones };
 }
 
-function renderProximoAporte() {
-  const body = document.getElementById('prox-body');
-  if (!body) return;
-  const { compras, totalCompras, pcts } = calcEtfReal();
-  if (totalCompras <= 0) {
-    body.innerHTML = '<div class="dim">Registra compras para calcular la brecha contra el objetivo.</div>';
-    return;
-  }
-  const brechas = Object.keys(ETF_TARGET)
-    .map(e => ({ e, gap: ETF_TARGET[e] - pcts[e] }))
-    .sort((a, b) => b.gap - a.gap);
-  const top = brechas[0];
-  const col = ETF_COLORS[top.e];
-  const monto = parseFloat(document.getElementById('prox-monto').value) || 0;
-  let extra = '';
-  if (monto > 0) {
-    const nuevo = ((compras[top.e] || 0) + monto) / (totalCompras + monto) * 100;
-    extra = '<div class="dim" style="margin-top:6px">Con ' + fmtU(monto) + ' pasaría de ' + pcts[top.e].toFixed(1) + '% a <span class="mono" style="color:var(--text)">' + nuevo.toFixed(1) + '%</span> (objetivo ' + ETF_TARGET[top.e].toFixed(1) + '%)</div>';
-  }
-  const resto = brechas.slice(1, 3).map(b =>
-    '<span class="mono" style="color:' + ETF_COLORS[b.e] + '">' + b.e + '</span> <span class="dim">' + (b.gap >= 0 ? '+' : '') + b.gap.toFixed(1) + 'pp</span>'
-  ).join(' &nbsp;·&nbsp; ');
-  body.innerHTML =
-    '<div class="mono" style="font-size:26px;font-weight:600;color:' + col + '">' + top.e + '</div>' +
-    '<div class="dim">' + ETF_NAMES[top.e] + ' · le faltan <span class="mono" style="color:var(--text)">' + top.gap.toFixed(1) + 'pp</span> para su objetivo</div>' +
-    extra +
-    '<div style="margin-top:10px;font-size:12px"><span class="dim">Siguientes: </span>' + resto + '</div>';
+function historialAportes() {
+  const meses = new Map();
+  records.filter(r => r.tipo==='aporte' || r.tipo==='retiro').forEach(r => {
+    const [dia,mes,anio]=r.fecha.split('/');
+    const key=anio+'-'+mes;
+    if (!meses.has(key)) meses.set(key,{key,label:mes+'/'+anio,depositos:0,retiros:0});
+    meses.get(key)[r.tipo==='aporte'?'depositos':'retiros']+=r.monto;
+  });
+  let acumulado=0;
+  return [...meses.values()].sort((a,b)=>a.key.localeCompare(b.key)).map(x => {
+    const neto=x.depositos-x.retiros; acumulado+=neto;
+    return {...x,neto,acumulado};
+  });
+}
+
+function renderHistorialAportes() {
+  const rows=historialAportes();
+  document.getElementById('prox-body').innerHTML=rows.length ?
+    '<table><thead><tr><th>Mes</th><th>Depósitos</th><th>Retiros</th><th>Aporte neto</th><th>Neto acumulado</th></tr></thead><tbody>'+rows.map(x =>
+    '<tr><td>'+esc(x.label)+'</td><td>'+fmtU(x.depositos)+'</td><td>'+fmtU(x.retiros)+'</td><td>'+fmtSignedU(x.neto)+'</td><td>'+fmtSignedU(x.acumulado)+'</td></tr>').join('')+'</tbody></table>' :
+    '<div class="dim">Sin depósitos ni retiros registrados.</div>';
 }
 
 function calcCostoPromedio() {
@@ -1093,98 +1089,61 @@ function renderPortafolio() {
 
   const nota = document.getElementById('portafolio-nota');
   if(nota) nota.style.display = hayCompras ? 'none' : 'block';
-  renderProximoAporte();
+  renderHistorialAportes();
   renderCostos();
 }
 
-function calcXIRR() {
-  const flujos = [];
-  records.forEach(r => {
-    if (r.tipo === 'aporte') flujos.push({ t: parseFechaHora(r), v: -r.monto });
-    else if (r.tipo === 'retiro') flujos.push({ t: parseFechaHora(r), v: r.monto });
-  });
-  if (!flujos.length) return null;
-  const sum = t => records.filter(r => r.tipo === t).reduce((s, r) => s + r.monto, 0);
-  const valor = Math.max(0, sum('aporte') - sum('retiro') + sum('rendimiento') + sum('dividendo') - sum('comision'));
-  const fin = new Date(Math.max(...records.map(r => parseFechaHora(r).getTime())));
-  if (isNaN(fin.getTime())) return null;
-  flujos.push({ t: fin, v: valor });
-  if (flujos.some(f => isNaN(f.t.getTime()))) return null;
-  const t0 = Math.min(...flujos.map(f => f.t.getTime()));
-  const dias = (fin.getTime() - t0) / 86400000;
-  if (dias < 30 || valor <= 0) return null;
-  const npv = r => flujos.reduce((s, f) => s + f.v / Math.pow(1 + r, (f.t.getTime() - t0) / 86400000 / 365), 0);
-  let lo = -0.99, hi = 10;
-  if (npv(lo) * npv(hi) > 0) return null;
-  for (let i = 0; i < 200; i++) {
-    const mid = (lo + hi) / 2;
-    if (npv(lo) * npv(mid) <= 0) hi = mid; else lo = mid;
-  }
-  return { rate: (lo + hi) / 2 * 100, dias: Math.round(dias), fin };
-}
+// El Libro no dispone de un valor de mercado fechado para calcular XIRR.
+function calcXIRR() { return null; }
 
 function renderRendimiento() {
-  const sum = t => records.filter(r=>r.tipo===t).reduce((s,r)=>s+r.monto,0);
-  const aportes = sum('aporte'), rendPrecio = sum('rendimiento'), dividendos = sum('dividendo');
-  const rend = rendPrecio + dividendos;
-  const retiros = sum('retiro'), comis = sum('comision');
-  const valor = Math.max(0, aportes-retiros+rend-comis);
-  const pct = aportes>0?(rend/aportes*100):0;
-
-  const xirr = calcXIRR();
+  const x=resumenLibro(), valor=x.neto;
   const card = (x, cls) => `<div class="stat ${cls}"><div class="stat-label">${x.label}</div><div class="stat-val" style="color:${x.color}">${x.val}</div></div>`;
   const hero = [
-    {label:'Valor estimado', val:fmtU(valor), color:'var(--blue)'},
-    {label:'Rendimiento acum.', val:(rend>=0?'+':'')+fmtSignedU(rend), color:rend>=0?'var(--green)':'var(--red)'},
-    {label:'Rentab. anualizada', val: xirr ? (xirr.rate>=0?'+':'')+xirr.rate.toFixed(2)+'%' : '—', color: xirr ? (xirr.rate>=0?'var(--green)':'var(--red)') : 'var(--muted)'},
+    {label:'Depósitos',val:fmtU(x.depositos),color:'var(--gold)'},
+    {label:'Retiros',val:fmtU(x.retiros),color:'var(--red)'},
+    {label:'Aporte neto',val:fmtSignedU(x.neto),color:'var(--blue)'},
   ];
   const minor = [
-    {label:'Total aportado', val:fmtU(aportes), color:'var(--gold)'},
-    {label:'Rentab. simple', val:(pct>=0?'+':'')+pct.toFixed(2)+'%', color:pct>=0?'var(--green)':'var(--red)'},
-    {label:'Dividendos', val:'+'+fmtU(dividendos), color:'var(--green)'},
-    {label:'Retiros', val:fmtU(retiros), color:'var(--red)'},
-    {label:'Comisiones', val:fmtU(comis), color:'var(--muted)'},
+    {label:'Dividendos registrados',val:fmtU(x.dividendos),color:'var(--green)'},
+    {label:'Ajustes registrados',val:fmtSignedU(x.ajustes),color:'var(--muted)'},
+    {label:'Comisiones',val:fmtU(x.comisiones),color:'var(--muted)'},
+    {label:'Saldo del Libro (no mercado)',val:fmtSignedU(x.saldo),color:'var(--blue)'},
   ];
   document.getElementById('stat-row').innerHTML = hero.map(x=>card(x,'hero')).join('');
   document.getElementById('stat-row2').innerHTML = minor.map(x=>card(x,'')).join('');
 
   const xn = document.getElementById('xirr-nota');
   if (xn) {
-    if (xirr) {
-      xn.style.display = 'block';
-      xn.textContent = 'Rentabilidad anualizada (XIRR) sobre ' + xirr.dias + ' días, hasta ' + xirr.fin.toLocaleDateString('es-CL').replace(/-/g, '/') + '. Pondera cuándo entró cada depósito.' + (xirr.dias < 365 ? ' Con menos de 1 año de historial es poco confiable: una ganancia chica en pocos meses se proyecta muy exagerada.' : '');
-    } else { xn.style.display = 'none'; }
+    xn.style.display='block';
+    xn.textContent='La rentabilidad y el valor de mercado se consultan en Racional. El saldo del Libro suma movimientos registrados y no sustituye esa valoración. Los registros históricos de rendimiento se muestran como ajustes; no se reclasifican ni se eliminan posibles duplicados automáticamente.';
   }
   const meta = parseFloat(document.getElementById('meta-inp').value)||0;
   const pw = document.getElementById('prog-wrap');
   if(meta>0){
-    const p = Math.min(Math.round(valor/meta*100),100);
+    const p = Math.max(0,Math.min(Math.round(valor/meta*100),100));
     pw.style.display='block';
     document.getElementById('prog-pct').textContent = p+'%';
-    document.getElementById('prog-label').textContent = valor>=meta?'Meta alcanzada ✓':'Progreso hacia la meta';
+    document.getElementById('prog-label').textContent = valor>=meta?'Meta alcanzada ✓':'Progreso del aporte neto hacia la meta';
     document.getElementById('prog-fill').style.width = Math.max(0,p)+'%';
     document.getElementById('prog-fill').style.background = valor>=meta?'var(--green)':'var(--gold)';
   } else { pw.style.display='none'; }
 
   if(lineChart){lineChart.destroy();lineChart=null;}
-  const movs = [...records].filter(r=>['aporte','retiro','rendimiento','dividendo','comision'].includes(r.tipo))
-    .sort((a,b)=>parseFechaHora(a)-parseFechaHora(b));
-  if(movs.length>0){
-    let accA=0, accV=0;
-    const labels=[], aportado=[], valorSerie=[];
-    movs.forEach(r=>{
-      if(r.tipo==='aporte'){ accA+=r.monto; accV+=r.monto; }
-      if(r.tipo==='rendimiento'){ accV+=r.monto; }
-      if(r.tipo==='dividendo'){ accV+=r.monto; }
-      if(r.tipo==='retiro'){ accV-=r.monto; }
-      if(r.tipo==='comision'){ accV-=r.monto; }
-      labels.push(fmtFecha(r.fecha)); aportado.push(Math.round(accA*100)/100); valorSerie.push(Math.round(Math.max(0,accV)*100)/100);
+  const rows=historialAportes();
+  if(rows.length>0){
+    let accD=0,accR=0;
+    const labels=[], aportado=[], valorSerie=[], retirosSerie=[];
+    rows.forEach(r=>{
+      accD+=r.depositos; accR+=r.retiros;
+      labels.push(r.label); aportado.push(accD); retirosSerie.push(accR); valorSerie.push(r.acumulado);
     });
     lineChart = new Chart(document.getElementById('line-canvas'),{
       type:'line',
       data:{ labels, datasets:[
-        {label:'Aportado acum.',data:aportado,borderColor:'#565b68',backgroundColor:'transparent',borderDash:[4,3],tension:.3,pointRadius:2},
-        {label:'Valor estimado',data:valorSerie,borderColor:'#c9a34e',backgroundColor:'rgba(201,163,78,.08)',fill:true,tension:.3,pointRadius:2,pointBackgroundColor:'#c9a34e'},
+        {label:'Retiros acumulados',data:retirosSerie,borderColor:'#e07070',backgroundColor:'transparent',pointRadius:2},
+        {label:'Depósitos acumulados',data:aportado,borderColor:'#565b68',backgroundColor:'transparent',borderDash:[4,3],stepped:true,pointRadius:2},
+        {label:'Aporte neto acumulado',data:valorSerie,borderColor:'#c9a34e',backgroundColor:'rgba(201,163,78,.08)',fill:true,stepped:true,pointRadius:2,pointBackgroundColor:'#c9a34e'},
       ]},
       options:{
         responsive:true,maintainAspectRatio:false,
@@ -1203,11 +1162,9 @@ function registrarRendimientoAuto() {
   const inp = document.getElementById('valor-actual-inp');
   const nuevoValor = parseFloat(inp.value);
   if (!Number.isFinite(nuevoValor) || nuevoValor < 0 || nuevoValor > 1e12) { alert('Ingresa el valor actual de tu portafolio en Racional.'); return; }
-  const sum = t => records.filter(r=>r.tipo===t).reduce((s,r)=>s+r.monto,0);
-  const aportes = sum('aporte'), rend = sum('rendimiento') + sum('dividendo'), retiros = sum('retiro'), comis = sum('comision');
-  const valorActualCalc = Math.max(0, aportes - retiros + rend - comis);
+  const valorActualCalc = resumenLibro().saldo;
   const delta = Math.round((nuevoValor - valorActualCalc) * 100) / 100;
-  if (delta === 0) { setSt('Sin cambios en el rendimiento', 'var(--muted)', 2500); return; }
+  if (delta === 0) { setSt('Sin cambios en la conciliación', 'var(--muted)', 2500); return; }
   const ajuste = {tipo:'rendimiento', monto: delta, desc: 'Ajuste automático (valor Racional: '+fmtU(nuevoValor)+')', fecha: hoy(), clp:0, tc:0, etf:''};
   if (!validarMovimiento(ajuste)) { alert('El ajuste supera los límites permitidos. Revisa el valor y tus movimientos.'); return; }
   records.push(ajuste);

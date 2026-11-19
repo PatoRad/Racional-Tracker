@@ -1,0 +1,39 @@
+name: Tracker 2.0 - pruebas aisladas
+on:
+  push:
+    branches: ['feature/tracker-2-finanzas-preview']
+    paths: ['tracker2/**', '.github/workflows/tracker2-preview.yml', '_config.yml']
+  pull_request:
+    paths: ['tracker2/**', '.github/workflows/tracker2-preview.yml', '_config.yml']
+permissions:
+  contents: read
+jobs:
+  unitarias:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Validar sintaxis y CSP
+        run: |
+          for file in tracker2/*.js; do node --check "$file"; done
+          grep -Fq "connect-src 'none'" tracker2/index.html
+      - name: Pruebas sintéticas
+        run: node tracker2/tests/run-unit.cjs
+  reglas-emulador:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Comprobar reglas en emulador demo
+        run: npx firebase emulators:exec --config tracker2/firebase.demo.json --project demo-tracker2 --only firestore "node --test tracker2/tests/finance-rules.test.cjs && node --test tracker2/tests/finance-integration.test.cjs && node --test tracker2/tests/combined-rules.test.cjs"

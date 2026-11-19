@@ -13,3 +13,4 @@ exclude:
   - storage-probe.js
   - probar-guardado.html
   - verificar-limite.html
+  - tracker2

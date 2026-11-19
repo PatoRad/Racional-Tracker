@@ -1,0 +1,4 @@
+{
+  "firestore": {"rules": "firestore.staging.rules"},
+  "emulators": {"firestore": {"port": 8089}, "ui": {"enabled": false}}
+}

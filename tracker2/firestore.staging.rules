@@ -1,0 +1,70 @@
+// SOLO PARA EMULADOR O PROYECTO DE ENSAYO. NO DESPLEGAR EN PRODUCCIÓN.
+// Firestore rules v2: users/{uid}/financeV2/state con cuentas y movimientos aislados.
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function owner(uid) {
+      return request.auth != null && request.auth.uid == uid &&
+        request.auth.token.email_verified == true &&
+        request.auth.token.trackerAccess == true &&
+        request.auth.token.firebase.sign_in_provider == 'google.com';
+    }
+    function validId(id) { return id.matches('^[A-Za-z0-9_-]{3,80}$'); }
+    function metaOk(d) {
+      return d.keys().hasAll(['schemaVersion','revision']) &&
+        d.keys().hasOnly(['schemaVersion','revision']) &&
+        d.schemaVersion == 1 && d.revision is int && d.revision >= 1 && d.revision < 9007199254740991;
+    }
+    function changed(uid) {
+      let p = /databases/$(database)/documents/users/$(uid)/financeV2/state;
+      let after = getAfter(p).data;
+      return metaOk(after) && after.revision == (exists(p) ? get(p).data.revision + 1 : 1);
+    }
+    function money(n,zero) {
+      return n is int && n >= (zero ? 0 : 1) && n <= 1000000000000;
+    }
+    function accountOk(d) {
+      return d.keys().hasAll(['name','type','currency','openingBalance']) &&
+        d.keys().hasOnly(['name','type','currency','openingBalance']) &&
+        d.name is string && d.name.size() > 0 && d.name.size() <= 60 &&
+        d.type in ['checking','cash','wallet','savings'] &&
+        d.currency in ['CLP','USD'] && money(d.openingBalance,true);
+    }
+    function movementOk(d) {
+      return d.keys().hasAll(['date','type','amount','note','category','source']) &&
+        d.keys().hasOnly(['date','type','amount','note','category','source','accountId','fromId','toId','toAmount','provider','externalId']) &&
+        d.type in ['income','expense','transfer','yield'] &&
+        d.date is string && d.date.matches('^(20[0-9]{2}|2100)-[0-9]{2}-[0-9]{2}$') &&
+        money(d.amount,false) && d.note is string && d.note.size() <= 200 &&
+        d.category is string && d.category.size() <= 60 &&
+        d.source in ['manual','demo','bank_import','bank_api'] &&
+        ((d.source in ['manual','demo'] && !d.keys().hasAny(['provider','externalId'])) ||
+          (d.source in ['bank_import','bank_api'] &&
+            d.keys().hasAll(['provider','externalId']) &&
+            d.provider is string && d.provider.matches('^[A-Za-z0-9._-]{2,60}$') &&
+            d.externalId is string && d.externalId.size() > 0 && d.externalId.size() <= 160)) &&
+        ((d.type == 'transfer' && d.keys().hasAll(['fromId','toId']) &&
+            !d.keys().hasAny(['accountId']) && validId(d.fromId) && validId(d.toId) &&
+            d.fromId != d.toId && (!d.keys().hasAny(['toAmount']) || money(d.toAmount,false))) ||
+          (d.type != 'transfer' && d.keys().hasAll(['accountId']) && validId(d.accountId) &&
+            !d.keys().hasAny(['fromId','toId','toAmount']) && d.category.size() > 0));
+    }
+    match /users/{uid}/financeV2/{document} {
+      allow read: if document == 'state' && owner(uid);
+      allow create: if document == 'state' && owner(uid) && metaOk(request.resource.data) && request.resource.data.revision == 1;
+      allow update: if document == 'state' && owner(uid) && metaOk(request.resource.data) && metaOk(resource.data) && request.resource.data.revision == resource.data.revision + 1;
+      allow delete: if false;
+      match /accounts/{id} {
+        allow read: if document == 'state' && owner(uid);
+        allow create, update: if document == 'state' && owner(uid) && validId(id) && accountOk(request.resource.data) && changed(uid);
+        allow delete: if false; // Nunca borrar cuentas por accidente; archivado por diseñar.
+      }
+      match /transactions/{id} {
+        allow read: if document == 'state' && owner(uid);
+        allow create, update: if document == 'state' && owner(uid) && validId(id) && movementOk(request.resource.data) && changed(uid);
+        allow delete: if document == 'state' && owner(uid) && changed(uid);
+      }
+    }
+    match /{path=**} { allow read, write: if false; }
+  }
+}

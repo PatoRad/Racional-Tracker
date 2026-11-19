@@ -10,7 +10,7 @@ html=sub(r'<link rel="stylesheet"[^>]+>', '', html)
 def load(page):
  page.set_content(html)
  page.add_style_tag(content=(base/'styles.css').read_text())
- for name in ['finance-core.js','finance-repository.js','app.js']:
+ for name in ['finance-core.js','finance-repository.js','finance-backup.js','finance-investments.js','app.js']:
   page.add_script_tag(content=(base/name).read_text())
 
 with sync_playwright() as p:
@@ -43,6 +43,19 @@ with sync_playwright() as p:
  page.locator('#menu-toggle').click();page.get_by_role('button',name='Cuentas y movimientos').click();page.get_by_role('button',name='Editar movimiento',exact=False).first.click();assert page.locator('#transaction-dialog').is_visible();page.get_by_role('button',name='Cancelar').last.click()
  page.locator('button[data-delete]').first.click();assert page.locator('#confirm-dialog').is_visible();page.locator('#confirm-delete').click();assert page.locator('#confirm-dialog').is_visible() is False
  page.get_by_role('button',name='Añadir cuenta').click();page.locator('#account-name').fill('Efectivo');page.locator('#account-opening').fill('15000');page.get_by_role('button',name='Crear cuenta').click();assert 'Efectivo' in page.locator('#page-content').inner_text()
+ page.get_by_role('button',name='Añadir cuenta').click();page.locator('#account-name').fill('Dólares');page.locator('#account-currency').select_option('USD');page.locator('#account-type').select_option('wallet');page.locator('#account-opening').fill('12.50');page.get_by_role('button',name='Crear cuenta').click()
+ assert 'US$' in page.locator('#page-content').inner_text() or 'USD' in page.locator('#page-content').inner_text()
+ page.get_by_role('button',name='+ Nuevo movimiento').click();page.locator('#tx-type').select_option('transfer');page.locator('#tx-from').select_option('bank-main');page.locator('#tx-to').select_option(label='Dólares (Billetera digital)')
+ assert page.locator('#field-to-amount').is_visible()
+ page.locator('#tx-amount').fill('9500');page.locator('#tx-to-amount').fill('10.00');page.locator('#tx-date').fill('2026-11-19');page.locator('#tx-note').fill('Cambio de prueba');page.get_by_role('button',name='Guardar movimiento').click()
+ assert not page.locator('#transaction-dialog').is_visible()
+ page.locator('#menu-toggle').click();page.get_by_role('button',name='Inicio',exact=True).click()
+ assert 'USD' in page.locator('#page-content').inner_text()
+ page.locator('#menu-toggle').click();page.get_by_role('button',name='Inversiones').click()
+ assert 'DATOS FICTICIOS' in page.locator('#page-content').inner_text()
+ page.locator('#menu-toggle').click();page.get_by_role('button',name='Configuración').click()
+ assert page.get_by_role('button',name='Descargar respaldo JSON').count()==1
+ assert page.get_by_role('button',name='Restaurar respaldo JSON').count()==1
  print('Desktop smoke OK; errors',errors)
  assert errors==[]
  mobile=browser.new_page(viewport={'width':390,'height':844},device_scale_factor=1,is_mobile=True,has_touch=True)
@@ -52,3 +65,4 @@ with sync_playwright() as p:
  assert mobile_errors==[]
  print('Mobile smoke OK')
  browser.close()
+

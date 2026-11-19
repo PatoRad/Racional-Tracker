@@ -1,39 +1,47 @@
-# Racional Tracker 2.0 — Base aislada de finanzas personales
+# Racional Tracker 2.0 — Base de desarrollo aislada
 
-Prototipo funcional de la **Etapa 1**, construido sin modificar el cliente ni las reglas de producción de Racional Tracker.
+**Rama:** `feature/tracker-2-finanzas-preview`. No hay cambios en `main`, ni conexión con Firestore de producción. Esta carpeta es una demo con datos ficticios, independiente del `index.html` actual del portafolio. La rama contiene código de persistencia de ensayo y reglas que **no deben desplegarse** en producción.
 
-## Ejecución
+## Probar el prototipo
 
-1. Abrir `index.html` en el navegador después de extraer todos los archivos de esta carpeta (o servir la carpeta con un servidor HTTP estático local).
-2. Abrir menú lateral `☰` para navegar entre Inicio, Cuentas, Estadísticas, Reportes, Ahorros e Inversiones.
-3. Registrar ingresos, gastos, transferencias e intereses de prueba; crear una cuenta adicional; editar y eliminar movimientos; filtrar por cuenta, cambiar mes y exportar CSV.
-4. Recargar para volver a cargar el estado inicial. **No introducir datos financieros reales:** el prototipo es efímero y no ofrece respaldo persistente.
+Extrae el ZIP y abre `index.html`, o ejecuta `python -m http.server 8000` dentro de la carpeta. El panel lateral muestra Inicio, Cuentas, Estadísticas, Reportes, Ahorros e Inversiones. Registra compras, ingresos, transferencias y rendimientos de ejemplo, crea cuentas CLP o USD, edita movimientos y compara estadísticas. Exporta CSV desde Reportes y un respaldo JSON desde Configuración; puedes volver a importarlo tras recargar. Los datos no se transmiten a ningún servidor ni se conservan automáticamente al cerrar.
 
-## Seguridad y límites
+En cuentas USD, los importes se ingresan en dólares con hasta dos decimales y se guardan como centavos. En cuentas CLP, se guardan pesos enteros. Si envías entre monedas distintas, debes ingresar cuánto salió y cuánto llegó. No se mezclan pesos y dólares en un total hasta definir explícitamente un tipo de cambio. Los datos de inversiones y el cambio utilizados en el módulo de integración son ficticios.
 
-- No incluye Firebase SDK, claves ni consultas de red; CSP restringe conexiones (`connect-src 'none'`).
-- Los valores iniciales son ficticios y se almacenan únicamente en la memoria de la pestaña; se pierden al recargar.
-- Solo CLP enteros en esta etapa. Las inversiones reales están expresamente desconectadas y no se agregan al patrimonio ficticio.
-- El motor contable comparte reglas para saldo y reportes. Las transferencias afectan dos cuentas pero no ingresos/gastos.
-- `finance-repository.js` define contrato de lectura/commit con revisión: una futura integración con Firestore usará otro adaptador tras implementar reglas y pruebas de seguridad.
-- Las fuentes futuras `bank_import` y `bank_api` exigen `provider` y `externalId` para deduplicar. **No hay conexión bancaria ni consentimiento de terceros implementados.**
-- Para producción faltan persistencia segura, autorización, respaldo, conciliación, conexión con inversiones, soporte USD/FX, pruebas de integración y accesibilidad adicionales.
+## Capas desarrolladas
 
-## Pruebas
+| Archivo | Función |
+|---|---|
+| `finance-core.js` | Validaciones, movimientos, saldos por moneda, transferencias, estadísticas y CSV sin red |
+| `finance-backup.js` | JSON versionado con checksum SHA-256 y comprobación de propietario |
+| `finance-investments.js` | Consolidación **solo lectura** de una valoración explícita, fechada y verificada |
+| `finance-firestore.js` | Adaptador para Firestore compat inyectable con lecturas paginadas, verificación de revisión, conflictos y escritura atómica |
+| `firestore.staging.rules` | Propuesta de reglas privadas para **emulador** o entorno de ensayo |
+| `firebase.demo.json` | Configuración emulador de Firestore en `localhost:8089` |
 
-Con Node.js >= 18:
+El cliente de demostración **no carga Firebase SDK** y su CSP define `connect-src 'none'`. El adaptador Firestore no se importa ni se inicializa desde esta página. Una eventual integración real requiere acceso autenticado, autorización administrativa, proyecto Firebase separado de ensayo, pruebas E2E y revisión explícita de reglas antes de publicar. La protección App Check debe verificarse aparte en el proyecto de ensayo, porque el emulador no demuestra enforcement real.
 
+## Pruebas locales
+
+```bash
+node --test tests/*.test.cjs # excepto finance-rules.test.cjs, que necesita emulador
+python tests/ui_smoke.py # Playwright, Chromium instalado
 ```
-node --test tests/*.test.cjs
-# desde la raíz del repositorio: node --test tracker2/tests/*.test.cjs
+
+Para ejecutar las pruebas del emulador desde la raíz del repositorio (con dependencias instaladas desde package-lock del proyecto actual):
+
+```bash
+npm ci --ignore-scripts
+npx firebase emulators:exec --config tracker2/firebase.demo.json --project demo-tracker2 --only firestore "node --test tracker2/tests/finance-rules.test.cjs"
 ```
 
-Las pruebas usan datos sintéticos y no acceden a cuentas ni servicios remotos.
+Si necesitas ejecutar todos los tests unitarios sin emulador: `node --test tracker2/tests/finance-core.test.cjs tracker2/tests/finance-extended.test.cjs tracker2/tests/finance-firestore.test.cjs tracker2/tests/finance-repository.test.cjs`.
 
-## Protección de main
+## Medidas y riesgos pendientes
 
-Esta base se trabaja en `feature/tracker-2-finanzas-preview`. No modificar `main`, reglas de Firestore de producción, documentos de inversiones ni implementar merge/despliegue sin aprobación y validación completa. Si se publica una previsualización, debe estar aislada y no apuntar a la base de datos real.
-
-### Prueba de la interfaz en navegador
-
-Existe una prueba de humo adicional en `tests/ui_smoke.py` con Playwright Python y Chromium. Prueba navegación, alta/edición/eliminación, transferencias, sanitización de descripciones, exportación CSV y diseño móvil; solo usa la demostración con datos sintéticos.
+- **No hay sincronización de datos personales reales** en esta versión; la interfaz usa un repositorio de memoria y respaldos manuales. El Firestore adapter está preparado, pero aún no conectado al inicio de sesión del usuario.
+- Los respaldos JSON detectan errores accidentales mediante checksum; **no están cifrados ni autenticados criptográficamente** frente a manipulación deliberada. Se recomienda guardarlos fuera de carpetas compartidas.
+- La conservación cifrada de credenciales bancarias y el diseño de integración bancaria real son proyectos posteriores. No se debe conectar a bancos con credenciales guardadas en el navegador.
+- La valuación real del portafolio exige una fuente coherente con fecha y criterio de valoración. Actualmente el portafolio de inversión original estima costo histórico y rendimiento, no cotizaciones actuales.
+- Se necesita validar el esquema de Firestore y el control de revisión con emulador, probar reglas de acceso, importaciones masivas, recuperación de desconexiones, auditoría de seguridad y accesibilidad final antes de cualquier producción.
+- No desplegar `firestore.staging.rules` ni modificar las reglas ya publicadas a partir de este prototipo: los rulesets de ensayo no preservan automáticamente todas las rutas del portafolio existente.

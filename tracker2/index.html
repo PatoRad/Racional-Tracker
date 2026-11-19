@@ -10,6 +10,8 @@
 <link rel="stylesheet" href="styles.css">
 <script defer src="finance-core.js"></script>
 <script defer src="finance-repository.js"></script>
+<script defer src="finance-backup.js"></script>
+<script defer src="finance-investments.js"></script>
 <script defer src="app.js"></script>
 </head>
 <body>
@@ -35,9 +37,9 @@
   </aside>
   <main class="main-content" id="main" tabindex="-1">
     <div class="page-heading"><div><span class="eyebrow">RESUMEN FINANCIERO</span><h1 id="page-title">Inicio</h1><p class="muted" id="page-subtitle">Consulta cómo se distribuye tu dinero.</p></div><div class="heading-actions"><label for="month-selector" class="sr-only">Mes del análisis</label><input id="month-selector" type="month" min="2000-01" max="2100-12" value="2026-11"><button id="new-transaction" type="button" class="btn btn-primary">+ Nuevo movimiento</button></div></div>
-    <div id="banner" class="banner">Vista experimental: todos los montos son ficticios. Los cambios solo se conservan mientras esta página esté abierta.</div>
+    <div id="banner" class="banner">Vista experimental: todos los montos son ficticios. Puedes exportar un respaldo JSON desde Configuración; no hay conexión con datos reales.</div>
     <div id="page-content" aria-live="polite"></div>
-    <footer class="site-footer">Racional Tracker 2.0 · Prototipo aislado y sin conexión a datos reales · CLP</footer>
+    <footer class="site-footer">Racional Tracker 2.0 · Prototipo aislado sin conexión a datos reales · CLP / USD</footer>
   </main>
 </div>
 <dialog id="transaction-dialog" class="modal"><form method="dialog" id="transaction-form" novalidate>
@@ -45,11 +47,12 @@
   <p class="muted" id="transaction-help">Completa los datos del movimiento.</p>
   <div class="fields">
     <label>Tipo de movimiento<select id="tx-type" required><option value="expense">Gasto / compra</option><option value="income">Ingreso</option><option value="transfer">Transferencia entre mis cuentas</option><option value="yield">Interés o rendimiento acreditado</option></select></label>
-    <label>Monto en CLP<input id="tx-amount" type="number" inputmode="numeric" min="1" max="1000000000000" step="1" required placeholder="Ej. 15000"></label>
+    <label><span id="tx-amount-unit">Monto en CLP</span><input id="tx-amount" type="text" inputmode="decimal" required placeholder="Ej. 15000"></label>
     <label>Fecha<input id="tx-date" type="date" min="2000-01-01" max="2100-12-31" required></label>
     <label id="field-account">Cuenta<select id="tx-account"></select></label>
     <label id="field-from" hidden>Cuenta de origen<select id="tx-from"></select></label>
     <label id="field-to" hidden>Cuenta de destino<select id="tx-to"></select></label>
+    <label id="field-to-amount" hidden><span id="tx-to-amount-unit">Monto recibido en otra moneda</span><input type="text" inputmode="decimal" id="tx-to-amount" placeholder="Ej. 10.50"></label>
     <label id="field-category">Categoría<select id="tx-category"></select></label>
     <label class="span-2">Descripción<input id="tx-note" type="text" maxlength="200" placeholder="Ej. Compra en supermercado"></label>
   </div>
@@ -58,11 +61,12 @@
 </form></dialog>
 <dialog id="account-dialog" class="modal"><form method="dialog" id="account-form" novalidate>
  <div class="modal-header"><div><span class="eyebrow">MIS CUENTAS</span><h2>Añadir cuenta</h2></div><button class="icon-button modal-close" type="button" aria-label="Cerrar">×</button></div>
- <div class="fields"><label class="span-2">Nombre de la cuenta<input type="text" id="account-name" maxlength="60" placeholder="Ej. Efectivo" required></label><label>Tipo<select id="account-type"><option value="checking">Banco</option><option value="wallet">Billetera digital</option><option value="cash">Efectivo</option><option value="savings">Ahorro</option></select></label><label>Saldo inicial en CLP<input type="number" id="account-opening" min="0" max="1000000000000" step="1" value="0" required></label></div>
+ <div class="fields"><label class="span-2">Nombre de la cuenta<input type="text" id="account-name" maxlength="60" placeholder="Ej. Efectivo" required></label><label>Tipo<select id="account-type"><option value="checking">Banco</option><option value="wallet">Billetera digital</option><option value="cash">Efectivo</option><option value="savings">Ahorro</option></select></label><label>Moneda<select id="account-currency"><option value="CLP">CLP (pesos)</option><option value="USD">USD (dólares)</option></select></label><label>Saldo inicial<input type="text" inputmode="decimal" id="account-opening" value="0" required></label></div>
  <p class="muted">El saldo inicial no cuenta como ingreso del mes. Es el dinero que ya existía antes de registrar movimientos.</p><p class="error-msg" id="account-error" role="alert" hidden></p>
  <div class="modal-actions"><button class="btn btn-secondary modal-close" type="button">Cancelar</button><button class="btn btn-primary" type="submit">Crear cuenta</button></div>
 </form></dialog>
 <dialog id="confirm-dialog" class="modal confirm-modal"><div class="modal-header"><h2>Eliminar movimiento</h2><button class="icon-button modal-close" type="button" aria-label="Cerrar">×</button></div><p>Este movimiento se eliminará solo de la demostración. ¿Deseas continuar?</p><div class="modal-actions"><button type="button" class="btn btn-secondary modal-close">Cancelar</button><button type="button" class="btn btn-danger" id="confirm-delete">Eliminar</button></div></dialog>
+<input type="file" id="backup-file" accept="application/json,.json" hidden>
 <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
 </body>
 </html>

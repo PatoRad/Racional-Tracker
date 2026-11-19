@@ -7,6 +7,18 @@
   'use strict';
   const TYPES = ['income','expense','transfer','yield'];
   const ACCOUNT_TYPES = ['checking','cash','wallet','savings'];
+  const CURRENCIES = ['CLP','USD']; // CLP = pesos, USD = centavos; todos los montos son enteros seguros.
+  function formatMinor(amount,currency='CLP') {
+    invariant(Number.isSafeInteger(amount) && CURRENCIES.includes(currency),'Monto o moneda inválidos');
+    return new Intl.NumberFormat('es-CL',{style:'currency',currency,minimumFractionDigits:currency==='USD'?2:0,maximumFractionDigits:currency==='USD'?2:0}).format(currency==='USD'?amount/100:amount);
+  }
+  function parseMinor(value,currency='CLP'){
+    invariant(CURRENCIES.includes(currency),'Moneda inválida');
+    const s=String(value).trim();
+    invariant(currency==='CLP'?/^\d{1,13}$/.test(s):/^\d{1,11}(?:\.\d{1,2})?$/.test(s),'Monto inválido: usa pesos enteros o dólares con hasta 2 decimales');
+    const n=currency==='CLP'?Number(s):(()=>{const [whole,cents='']=s.split('.');return Number(whole)*100+Number(cents.padEnd(2,'0'));})();
+    invariant(isAmount(n,true),'Monto fuera de rango');return n;
+  }
   const CATEGORY = {
     income: ['Sueldo','Trabajo independiente','Reembolso','Otros ingresos'],
     expense: ['Alimentación','Transporte','Servicios','Vivienda','Salud','Educación','Entretenimiento','Compras','Otros gastos'],
@@ -27,7 +39,7 @@
     invariant(a && validId(a.id), 'ID de cuenta inválido');
     invariant(validText(a.name,60) && a.name.trim().length>0, 'Nombre de cuenta inválido');
     invariant(ACCOUNT_TYPES.includes(a.type), 'Tipo de cuenta inválido');
-    invariant(a.currency==='CLP', 'Este prototipo admite cuentas CLP solamente');
+    invariant(CURRENCIES.includes(a.currency), 'La cuenta debe estar en CLP o USD');
     invariant(isAmount(a.openingBalance,true), 'Saldo inicial inválido');
     return a;
   }
@@ -43,12 +55,16 @@
       invariant(typeof tx.provider==='string' && /^[a-z0-9._-]{2,60}$/i.test(tx.provider), 'Proveedor bancario inválido');
       invariant(typeof tx.externalId==='string' && tx.externalId.trim().length>0 && tx.externalId.length<=160, 'Referencia bancaria obligatoria');
     }
-    const exists = id => accounts.some(a => a.id === id);
+    const lookup = id => accounts.find(a=>a.id===id);
     if (tx.type === 'transfer') {
-      invariant(exists(tx.fromId) && exists(tx.toId), 'Las cuentas de transferencia deben existir');
+      const from=lookup(tx.fromId),to=lookup(tx.toId);
+      invariant(from && to, 'Las cuentas de transferencia deben existir');
       invariant(tx.fromId !== tx.toId, 'Las cuentas deben ser distintas');
+      if(from.currency!==to.currency) invariant(isAmount(tx.toAmount), 'Conversión: debes indicar el monto recibido en la otra moneda');
+      else invariant(tx.toAmount === undefined, 'No se permite monto convertido en transferencias de la misma moneda');
     } else {
-      invariant(exists(tx.accountId), 'Cuenta inexistente');
+      invariant(lookup(tx.accountId), 'Cuenta inexistente');
+      invariant(tx.toAmount === undefined, 'Monto destino no corresponde al movimiento');
       invariant(typeof tx.category==='string' && tx.category.trim().length>0, 'Categoría requerida');
     }
     return tx;
@@ -71,26 +87,42 @@
     validateLedger(accounts,transactions);
     const balances=Object.fromEntries(accounts.map(a=>[a.id,a.openingBalance]));
     for(const tx of transactions) {
-      if(tx.type==='transfer'){balances[tx.fromId]-=tx.amount;balances[tx.toId]+=tx.amount;}
+      if(tx.type==='transfer'){balances[tx.fromId]-=tx.amount;balances[tx.toId]+=tx.toAmount??tx.amount;}
       else balances[tx.accountId]+=(tx.type==='expense'?-tx.amount:tx.amount);
     }
     invariant(Object.values(balances).every(Number.isSafeInteger),'Saldo supera el límite seguro');
     return balances;
   }
-  function periodSummary(accounts, transactions, month) {
+  function periodSummary(accounts, transactions, month, currency='CLP') {
     invariant(typeof month==='string' && /^\d{4}-(0[1-9]|1[0-2])$/.test(month),'Mes inválido');
+    invariant(CURRENCIES.includes(currency),'Moneda inválida');
     validateLedger(accounts,transactions);
+    const byId=Object.fromEntries(accounts.map(a=>[a.id,a]));
     const items=transactions.filter(tx=>tx.date.startsWith(month));
-    const totals={income:0,expense:0,yield:0,transfer:0}; const categories=Object.create(null);
-    for(const tx of items){totals[tx.type]+=tx.amount;if(tx.type==='expense')categories[tx.category]=(categories[tx.category]||0)+tx.amount;}
+    const totals={income:0,expense:0,yield:0,transfer:0};
+    const categories=Object.create(null);
+    for(const tx of items){
+      const txCurrency=tx.type==='transfer'?byId[tx.fromId].currency:byId[tx.accountId].currency;
+      if(txCurrency!==currency)continue;
+      totals[tx.type]+=tx.amount;
+      if(tx.type==='expense')categories[tx.category]=(categories[tx.category]||0)+tx.amount;
+    }
     invariant(Object.values(totals).every(Number.isSafeInteger),'Totales exceden límite seguro');
-    return {...totals,net:totals.income+totals.yield-totals.expense,categories,count:items.length};
+    return {...totals,net:totals.income+totals.yield-totals.expense,categories,count:items.length,currency};
   }
-  function overview(accounts, transactions, month) {
+  function overview(accounts, transactions, month, fxClpPerUsd=null) {
     const balances=calculateBalances(accounts,transactions), totals=periodSummary(accounts,transactions,month);
-    let available=0,savings=0;
-    for(const a of accounts) {if(a.type==='savings')savings+=balances[a.id];else available+=balances[a.id];}
-    return {balances,available,savings,assets:available+savings,...totals};
+    const byCurrency={CLP:{available:0,savings:0,assets:0},USD:{available:0,savings:0,assets:0}};
+    for(const a of accounts) {const group=byCurrency[a.currency];if(a.type==='savings')group.savings+=balances[a.id];else group.available+=balances[a.id];}
+    for(const group of Object.values(byCurrency)) {group.assets=group.available+group.savings;invariant(Object.values(group).every(Number.isSafeInteger),'Saldo por moneda no seguro');}
+    const clp=byCurrency.CLP,usd=byCurrency.USD;
+    let consolidatedCLP=null;
+    if(fxClpPerUsd!==null){
+      invariant(Number.isFinite(fxClpPerUsd)&&fxClpPerUsd>0&&fxClpPerUsd<=1_000_000,'Tipo de cambio inválido');
+      consolidatedCLP=clp.assets+Math.round(usd.assets*fxClpPerUsd/100);
+      invariant(Number.isSafeInteger(consolidatedCLP),'Valor convertido no seguro');
+    }
+    return {balances,available:clp.available,savings:clp.savings,assets:clp.assets,byCurrency,consolidatedCLP,...totals};
   }
   function monthSeries(accounts,transactions,month,count=6) {
     invariant(Number.isInteger(count) && count>=1 && count<=24,'Cantidad de meses inválida');
@@ -129,10 +161,12 @@
   }
   function exportTransactionsCSV(accounts,transactions) {
     validateLedger(accounts,transactions);
-    const names=Object.fromEntries(accounts.map(a=>[a.id,a.name]));
-    const header=['Fecha','Tipo','Monto CLP','Cuenta','Cuenta destino','Categoría','Descripción','Origen'];
+    const byId=Object.fromEntries(accounts.map(a=>[a.id,a]));
+    const header=['Fecha','Tipo','Monto origen (unidad mínima)','Moneda origen','Cuenta','Monto destino (unidad mínima)','Moneda destino','Cuenta destino','Categoría','Descripción','Origen'];
     const rows=transactions.slice().sort((a,b)=>a.date.localeCompare(b.date)||a.id.localeCompare(b.id)).map(t=>[
-      t.date,t.type,t.amount,t.type==='transfer'?names[t.fromId]:names[t.accountId],t.type==='transfer'?names[t.toId]:'',t.category,t.note,t.source
+      t.date,t.type,t.amount,(t.type==='transfer'?byId[t.fromId]:byId[t.accountId]).currency,
+      t.type==='transfer'?byId[t.fromId].name:byId[t.accountId].name,
+      t.type==='transfer'?(t.toAmount??t.amount):'',t.type==='transfer'?byId[t.toId].currency:'',t.type==='transfer'?byId[t.toId].name:'',t.category,t.note,t.source
     ]);
     return '\uFEFF'+[header,...rows].map(r=>r.map(escapeCSVCell).join(';')).join('\r\n');
   }
@@ -150,5 +184,5 @@
     validateLedger(accounts,transactions);
     return {accounts,transactions};
   }
-  return Object.freeze({TYPES,ACCOUNT_TYPES,CATEGORY,validateAccount,validateTransaction,validateLedger,calculateBalances,periodSummary,overview,monthSeries,addAccount,addTransaction,updateTransaction,deleteTransaction,exportTransactionsCSV,demoData});
+  return Object.freeze({TYPES,ACCOUNT_TYPES,CURRENCIES,CATEGORY,formatMinor,parseMinor,validateAccount,validateTransaction,validateLedger,calculateBalances,periodSummary,overview,monthSeries,addAccount,addTransaction,updateTransaction,deleteTransaction,exportTransactionsCSV,demoData});
 });

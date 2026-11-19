@@ -32,7 +32,7 @@ Para ejecutar las pruebas del emulador desde la raíz del repositorio (con depen
 
 ```bash
 npm ci --ignore-scripts
-npx firebase emulators:exec --config tracker2/firebase.demo.json --project demo-tracker2 --only firestore "node --test tracker2/tests/finance-rules.test.cjs"
+npx firebase emulators:exec --config tracker2/firebase.demo.json --project demo-tracker2 --only firestore "node --test tracker2/tests/finance-rules.test.cjs && node --test tracker2/tests/finance-integration.test.cjs"
 ```
 
 Si necesitas ejecutar todos los tests unitarios sin emulador: `node --test tracker2/tests/finance-core.test.cjs tracker2/tests/finance-extended.test.cjs tracker2/tests/finance-firestore.test.cjs tracker2/tests/finance-repository.test.cjs`.

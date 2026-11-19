@@ -25,6 +25,7 @@ Con Node.js >= 18:
 
 ```
 node --test tests/*.test.cjs
+# desde la raíz del repositorio: node --test tracker2/tests/*.test.cjs
 ```
 
 Las pruebas usan datos sintéticos y no acceden a cuentas ni servicios remotos.
@@ -32,3 +33,7 @@ Las pruebas usan datos sintéticos y no acceden a cuentas ni servicios remotos.
 ## Protección de main
 
 Esta base se trabaja en `feature/tracker-2-finanzas-preview`. No modificar `main`, reglas de Firestore de producción, documentos de inversiones ni implementar merge/despliegue sin aprobación y validación completa. Si se publica una previsualización, debe estar aislada y no apuntar a la base de datos real.
+
+### Prueba de la interfaz en navegador
+
+Existe una prueba de humo adicional en `tests/ui_smoke.py` con Playwright Python y Chromium. Prueba navegación, alta/edición/eliminación, transferencias, sanitización de descripciones, exportación CSV y diseño móvil; solo usa la demostración con datos sintéticos.

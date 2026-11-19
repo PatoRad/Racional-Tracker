@@ -1,0 +1,28 @@
+name: Tracker 2.0 - pruebas aisladas
+on:
+  push:
+    branches: ['feature/tracker-2-finanzas-preview']
+    paths:
+      - 'tracker2/**'
+      - '.github/workflows/tracker2-preview.yml'
+  pull_request:
+    paths:
+      - 'tracker2/**'
+permissions:
+  contents: read
+jobs:
+  pruebas-tracker2:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Validar sintaxis
+        run: |
+          node --check tracker2/finance-core.js
+          node --check tracker2/finance-repository.js
+          node --check tracker2/app.js
+      - name: Pruebas con datos ficticios
+        run: node --test tracker2/tests/*.test.cjs

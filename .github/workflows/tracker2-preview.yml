@@ -36,4 +36,4 @@ jobs:
           java-version: '21'
       - run: npm ci --ignore-scripts --no-audit --no-fund
       - name: Comprobar reglas en emulador demo
-        run: npx firebase emulators:exec --config tracker2/firebase.demo.json --project demo-tracker2 --only firestore "node --test tracker2/tests/finance-rules.test.cjs && node --test tracker2/tests/finance-integration.test.cjs"
+        run: npx firebase emulators:exec --config tracker2/firebase.demo.json --project demo-tracker2 --only firestore "node --test tracker2/tests/finance-rules.test.cjs && node --test tracker2/tests/finance-integration.test.cjs && node --test tracker2/tests/combined-rules.test.cjs"

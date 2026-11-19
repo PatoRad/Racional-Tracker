@@ -45,3 +45,8 @@ Si necesitas ejecutar todos los tests unitarios sin emulador: `node --test track
 - La valuación real del portafolio exige una fuente coherente con fecha y criterio de valoración. Actualmente el portafolio de inversión original estima costo histórico y rendimiento, no cotizaciones actuales.
 - Se necesita validar el esquema de Firestore y el control de revisión con emulador, probar reglas de acceso, importaciones masivas, recuperación de desconexiones, auditoría de seguridad y accesibilidad final antes de cualquier producción.
 - No desplegar `firestore.staging.rules` ni modificar las reglas ya publicadas a partir de este prototipo: los rulesets de ensayo no preservan automáticamente todas las rutas del portafolio existente.
+
+## Candidato de acceso privado (sin publicación)
+Se añadió `finanzas.html` para una futura integración con Google Auth, App Check y el adaptador Firestore. A diferencia de `index.html` (demo sin red), esta pantalla debe probarse en un hosting autorizado y con reglas combinadas. `finance-session.js` valida la cuenta y descarta respuestas tardías tras cerrar sesión. La pantalla bloquea escrituras cuando no hay acceso confirmado y el botón de inversiones enlaza al módulo actual sin duplicar datos.
+
+Las reglas de producción vigentes **no** se han sustituido. `firestore.production-candidate.rules` es solo una propuesta que conserva el portafolio y agrega Finanzas. `_config.yml` sigue excluyendo todo `tracker2` de GitHub Pages. El despliegue de Firebase y el acceso real con App Check siguen pendientes y requieren verificaciones fuera del emulador.

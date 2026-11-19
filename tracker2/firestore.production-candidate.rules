@@ -1,4 +1,6 @@
-// CANDIDATO SIN DESPLIEGUE. Conservar las rutas del portafolio y añadir finanzas.\n// Publicar sólo con cliente conectado, pruebas E2E y controles de producción aprobados.\n// Prototipo NO desplegado. Revisar y probar antes de adopción.
+// CANDIDATO SIN DESPLIEGUE. Conservar las rutas del portafolio y añadir finanzas.
+// Publicar sólo con cliente conectado, pruebas E2E y controles de producción aprobados.
+// Prototipo NO desplegado. Revisar y probar antes de adopción.
 // Modelo: users/{uid}/portfolios/main {schemaVersion:2, revision:int >=1}.
 // movements/{id}: tipo enum, monto number +/-1e12 (positivo salvo rendimiento),
 // desc string 1..500, fecha timestamp 1900..2200, hora HH:mm o vacía,

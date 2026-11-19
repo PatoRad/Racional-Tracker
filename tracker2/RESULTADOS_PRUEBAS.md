@@ -16,3 +16,8 @@
 - Cotizaciones de USD o de ETF en tiempo real: sólo supuestos explícitos de demostración.
 
 **Política:** no modificar `main`, ni Firestore real, ni datos de inversión. El cliente demo tiene CSP `connect-src 'none'`.
+## Validaciones adicionales
+- 30 pruebas unitarias del motor y control de sesión aprobadas localmente con Node 22.
+- Nuevo caso: lectura de Firestore retrasada tras cerrar sesión no muestra información privada.
+- Suite de reglas **combinadas** agregada al workflow para validar la coexistencia con el portafolio.
+- Pendientes de verificación: navegador completo con sesión Google y App Check reales, reglas de producción y recuperación sobre dominio autorizado.

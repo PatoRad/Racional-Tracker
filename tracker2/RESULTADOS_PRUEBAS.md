@@ -6,11 +6,11 @@
 - Pruebas de navegador en Chromium mediante Playwright: escritorio y móvil correctos, sin errores de JavaScript.
 - Comprobadas: navegación lateral, transferencias, doble conteo, cuentas CLP/USD, campos de cambio de divisas, edición, eliminación, escape HTML y exportación CSV.
 - Respaldos JSON: creación, importación correcta, rechazo de otro propietario y rechazo de checksum modificado (prueba unitaria); interfaz de importación/exportación disponible, no ensayada en navegador confiable por las restricciones del navegador de pruebas.
-- Firestore: adaptador probado con una simulación de SDK. Reglas de seguridad probadas con el emulador real mediante GitHub Actions en proyecto `demo-tracker2` (ejecución 44491402559).
+- Firestore: adaptador probado con una simulación de SDK. Reglas de seguridad y adaptador con SDK real probados mediante GitHub Actions en el emulador del proyecto `demo-tracker2` (ejecución 44491736824): 3 pruebas de reglas y 1 prueba de integración, todas aprobadas.
 
 ## No verificado / no habilitado
 
-- Prueba de integración del adaptador con el SDK real en el emulador (`tests/finance-integration.test.cjs`) aún pendiente de ejecutar en CI; App Check real necesita revisión separada.
+- App Check en un entorno real (el emulador no garantiza enforcement), el ciclo de autenticación/desautenticación del navegador y la conexión al frontend siguen pendientes de pruebas independientes.
 - Autenticación Google y sincronización desde la interfaz, validación entre dos equipos y recuperación de sesiones reales.
 - Restauración de datos personales reales, importaciones bancarias en producción o valoraciones del portafolio en vivo.
 - Cotizaciones de USD o de ETF en tiempo real: sólo supuestos explícitos de demostración.
